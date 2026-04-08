@@ -12,6 +12,14 @@ const config: UserConfigExport = {
   plugins: ["@tarojs/plugin-framework-react", "@tarojs/plugin-platform-weapp"],
   compiler: "vite",
   framework: "react",
+  defineConstants: {
+    __APP_ENV__: JSON.stringify(
+      process.env.NODE_ENV === "production" ? "production" : "development"
+    ),
+    __API_BASE_URL__: JSON.stringify(
+      process.env.TARO_APP_API_BASE_URL || "http://localhost:3000/api"
+    )
+  },
   mini: {},
   h5: {}
 };

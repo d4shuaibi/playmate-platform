@@ -9,7 +9,7 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["@tarojs/taro", "@tarojs/components"]
+    "types": ["@tarojs/taro", "@tarojs/components", "node"]
   },
   "include": ["src"]
 }

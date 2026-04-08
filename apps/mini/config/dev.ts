@@ -1,10 +1,21 @@
 import type { UserConfigExport } from "@tarojs/cli";
 
-export default {
+const config = {
   logger: {
     quiet: false
   },
-  defineConstants: {
-    __APP_ENV__: JSON.stringify("development")
-  }
-} satisfies UserConfigExport;
+  env: {
+    TARO_APP_API_BASE_URL: "http://localhost:3000/api"
+  },
+  compiler: {
+    type: "vite",
+    viteConfig: {
+      build: {
+        sourcemap: true
+      }
+    }
+  },
+  defineConstants: {}
+} as unknown as UserConfigExport;
+
+export default config;

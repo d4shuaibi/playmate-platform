@@ -1,7 +1,10 @@
 import type { UserConfigExport } from "@tarojs/cli";
 
-export default {
-  defineConstants: {
-    __APP_ENV__: JSON.stringify("production")
-  }
-} satisfies UserConfigExport;
+const config = {
+  env: {
+    TARO_APP_API_BASE_URL: "https://admin.example.com/api"
+  },
+  defineConstants: {}
+} as unknown as UserConfigExport;
+
+export default config;

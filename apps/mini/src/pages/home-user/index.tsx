@@ -3,7 +3,8 @@ import Taro from "@tarojs/taro";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import "../../components/bottom-bar/bottom-bar.scss";
-import { getRole } from "../../utils/role";
+import { getRole, setRole, setToken } from "../../utils/role";
+import { request } from "../../services/http";
 
 const UserHomePage = () => {
   const role = getRole();
@@ -81,7 +82,35 @@ const UserHomePage = () => {
       </View>
 
       <View className="userHome__cardGrid">
-        <View className="userHome__serviceCard">
+        <View
+          className="userHome__serviceCard"
+          onClick={async () => {
+            try {
+              const loginResult = await Taro.login();
+              const apiResult = await request<{ token: string; role: "user" | "worker" }>(
+                "/auth/mini/login",
+                {
+                  method: "POST",
+                  body: { code: loginResult.code }
+                }
+              );
+              setToken(apiResult.data.token);
+              setRole(apiResult.data.role);
+
+              if (apiResult.data.role === "worker") {
+                void Taro.showToast({ title: "已识别为打手，跳转工作台", icon: "none" });
+                void Taro.redirectTo({ url: "/pages/home-worker/index" });
+                return;
+              }
+
+              void Taro.showToast({ title: "下单成功（原型）", icon: "none" });
+            } catch (error) {
+              console.log("登录失败", error);
+              void Taro.showToast({ title: "登录失败，请重试", icon: "none" });
+            }
+          }}
+          aria-label="点击下单（触发登录）"
+        >
           <View className="userHome__serviceCover userHome__serviceCover--a">
             <Text className="userHome__coverChip userHome__coverChip--hot">热门</Text>
           </View>
