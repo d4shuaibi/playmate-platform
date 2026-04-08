@@ -1,11 +1,11 @@
 .page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: #0b0c10;
   padding: 24px;
 }
 
 .card {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 12px;
   padding: 16px;
 }
@@ -13,14 +13,41 @@
 .title {
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: rgba(243, 244, 246, 0.95);
   display: block;
 }
 
 .desc {
   margin-top: 8px;
   font-size: 14px;
-  color: #4b5563;
+  color: rgba(229, 231, 235, 0.65);
   display: block;
 }
 
+.actions {
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.btn {
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.9), rgba(99, 102, 241, 0.7));
+}
+
+.btnSecondary {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.55), rgba(255, 255, 255, 0.06));
+}
+
+.btnText {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(17, 24, 39, 0.9);
+}

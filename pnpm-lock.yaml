@@ -76,13 +76,19 @@ importers:
   apps/mini:
     dependencies:
       '@tarojs/components':
-        specifier: ^4.0.12
+        specifier: 4.1.11
         version: 4.1.11(@tarojs/helper@4.1.11)(@types/react@18.3.28)(postcss@8.5.9)(rollup@3.30.0)(webpack@5.105.4(@swc/core@1.3.96))
+      '@tarojs/react':
+        specifier: 4.1.11
+        version: 4.1.11(react@18.3.1)
       '@tarojs/runtime':
-        specifier: ^4.0.12
+        specifier: 4.1.11
+        version: 4.1.11
+      '@tarojs/shared':
+        specifier: 4.1.11
         version: 4.1.11
       '@tarojs/taro':
-        specifier: ^4.0.12
+        specifier: 4.1.11
         version: 4.1.11(@tarojs/components@4.1.11(@tarojs/helper@4.1.11)(@types/react@18.3.28)(postcss@8.5.9)(rollup@3.30.0)(webpack@5.105.4(@swc/core@1.3.96)))(@tarojs/helper@4.1.11)(@tarojs/shared@4.1.11)(@types/react@18.3.28)(postcss@8.5.9)(rollup@3.30.0)(webpack@5.105.4(@swc/core@1.3.96))
       react:
         specifier: ^18.3.1
@@ -91,20 +97,26 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
+      '@babel/plugin-proposal-class-properties':
+        specifier: ^7.18.6
+        version: 7.18.6(@babel/core@7.29.0)
+      '@babel/plugin-proposal-decorators':
+        specifier: ^7.28.0
+        version: 7.29.0(@babel/core@7.29.0)
       '@eslint/js':
         specifier: ^9.35.0
         version: 9.39.4
       '@tarojs/cli':
-        specifier: ^4.0.12
+        specifier: 4.1.11
         version: 4.1.11(@types/node@22.19.17)
       '@tarojs/plugin-framework-react':
-        specifier: ^4.0.12
+        specifier: 4.1.11
         version: 4.1.11(@tarojs/helper@4.1.11)(@tarojs/runtime@4.1.11)(@tarojs/shared@4.1.11)(@vitejs/plugin-react@4.7.0(vite@4.5.14(@types/node@22.19.17)(sass@1.99.0)(terser@5.46.1)))(react@18.3.1)(vite@4.5.14(@types/node@22.19.17)(sass@1.99.0)(terser@5.46.1))(webpack@5.105.4(@swc/core@1.3.96))
       '@tarojs/plugin-platform-weapp':
-        specifier: ^4.0.12
+        specifier: 4.1.11
         version: 4.1.11(@tarojs/service@4.1.11)(@tarojs/shared@4.1.11)
       '@tarojs/vite-runner':
-        specifier: ^4.0.12
+        specifier: 4.1.11
         version: 4.1.11(@tarojs/runtime@4.1.11)(@types/babel__core@7.20.5)(postcss@8.5.9)(rollup@3.30.0)(terser@5.46.1)(typescript@5.9.3)(vite@4.5.14(@types/node@22.19.17)(sass@1.99.0)(terser@5.46.1))
       '@types/react':
         specifier: ^18.3.24
@@ -112,6 +124,9 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.7
         version: 18.3.7(@types/react@18.3.28)
+      cross-env:
+        specifier: ^7.0.3
+        version: 7.0.3
       eslint:
         specifier: ^9.35.0
         version: 9.39.4
@@ -391,8 +406,27 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0
 
+  '@babel/plugin-proposal-class-properties@7.18.6':
+    resolution: {integrity: sha512-cumfXOF0+nzZrrN8Rf0t7M+tF6sZc7vhQwYQck9q1/5w2OExlD+b4v4RpMJFaV1Z7WcDRgO6FqvxqxGlwo+RHQ==}
+    engines: {node: '>=6.9.0'}
+    deprecated: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-class-properties instead.
+    peerDependencies:
+      '@babel/core': ^7.0.0-0
+
+  '@babel/plugin-proposal-decorators@7.29.0':
+    resolution: {integrity: sha512-CVBVv3VY/XRMxRYq5dwr2DS7/MvqPm23cOCjbwNnVrfOqcWlnefua1uUs0sjdKOGjvPUG633o07uWzJq4oI6dA==}
+    engines: {node: '>=6.9.0'}
+    peerDependencies:
+      '@babel/core': ^7.0.0-0
+
   '@babel/plugin-proposal-private-property-in-object@7.21.0-placeholder-for-preset-env.2':
     resolution: {integrity: sha512-SOSkfJDddaM7mak6cPEpswyTRnuRltl429hMraQEglW+OkovnCzsiszTmsrlY//qLFjCpQDFRvjdm2wA5pPm9w==}
+    engines: {node: '>=6.9.0'}
+    peerDependencies:
+      '@babel/core': ^7.0.0-0
+
+  '@babel/plugin-syntax-decorators@7.28.6':
+    resolution: {integrity: sha512-71EYI0ONURHJBL4rSFXnITXqXrrY8q4P0q006DPfN+Rk+ASM+++IBXem/ruokgBZR8YNEWZ8R6B+rCb8VcUTqA==}
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': ^7.0.0-0
@@ -2114,6 +2148,12 @@ packages:
       '@tarojs/service': 4.1.11
       '@tarojs/shared': 4.1.11
 
+  '@tarojs/react@4.1.11':
+    resolution: {integrity: sha512-+F/oH/7AXUbWKRu9Dg/S5mBOqDi8o4RMctaoRuYBI7ZTe4uNmCGY3DJDjf+gH7kThVvpPJ2VsbyiWzs/V0bOPg==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      react: ^18
+
   '@tarojs/runner-utils@4.1.11':
     resolution: {integrity: sha512-c8aDNRQCP0F9MeN5oyycYl+h22nOsh5vNkRs1ToYxyp4T4EpACcSQbisxdOKpyKCO6vCv86RIjzjkIbBDR84Cw==}
     engines: {node: '>= 18'}
@@ -2843,6 +2883,11 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  cross-env@7.0.3:
+    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
+    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
+    hasBin: true
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -4611,6 +4656,12 @@ packages:
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
+  react-reconciler@0.29.0:
+    resolution: {integrity: sha512-wa0fGj7Zht1EYMRhKWwoo1H9GApxYLBuhoAuXN0TlltESAjDssB+Apf0T/DngVqaMyPypDmabL37vw/2aRM98Q==}
+    engines: {node: '>=0.10.0'}
+    peerDependencies:
+      react: ^18.2.0
+
   react-refresh@0.17.0:
     resolution: {integrity: sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==}
     engines: {node: '>=0.10.0'}
@@ -5714,9 +5765,31 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@babel/plugin-proposal-class-properties@7.18.6(@babel/core@7.29.0)':
+    dependencies:
+      '@babel/core': 7.29.0
+      '@babel/helper-create-class-features-plugin': 7.28.6(@babel/core@7.29.0)
+      '@babel/helper-plugin-utils': 7.28.6
+    transitivePeerDependencies:
+      - supports-color
+
+  '@babel/plugin-proposal-decorators@7.29.0(@babel/core@7.29.0)':
+    dependencies:
+      '@babel/core': 7.29.0
+      '@babel/helper-create-class-features-plugin': 7.28.6(@babel/core@7.29.0)
+      '@babel/helper-plugin-utils': 7.28.6
+      '@babel/plugin-syntax-decorators': 7.28.6(@babel/core@7.29.0)
+    transitivePeerDependencies:
+      - supports-color
+
   '@babel/plugin-proposal-private-property-in-object@7.21.0-placeholder-for-preset-env.2(@babel/core@7.29.0)':
     dependencies:
       '@babel/core': 7.29.0
+
+  '@babel/plugin-syntax-decorators@7.28.6(@babel/core@7.29.0)':
+    dependencies:
+      '@babel/core': 7.29.0
+      '@babel/helper-plugin-utils': 7.28.6
 
   '@babel/plugin-syntax-import-assertions@7.28.6(@babel/core@7.29.0)':
     dependencies:
@@ -7283,6 +7356,13 @@ snapshots:
       '@tarojs/service': 4.1.11
       '@tarojs/shared': 4.1.11
 
+  '@tarojs/react@4.1.11(react@18.3.1)':
+    dependencies:
+      '@tarojs/runtime': 4.1.11
+      '@tarojs/shared': 4.1.11
+      react: 18.3.1
+      react-reconciler: 0.29.0(react@18.3.1)
+
   '@tarojs/runner-utils@4.1.11':
     dependencies:
       '@tarojs/helper': 4.1.11
@@ -8228,6 +8308,10 @@ snapshots:
       parse-json: 5.2.0
     optionalDependencies:
       typescript: 5.9.3
+
+  cross-env@7.0.3:
+    dependencies:
+      cross-spawn: 7.0.6
 
   cross-spawn@7.0.6:
     dependencies:
@@ -9622,7 +9706,7 @@ snapshots:
   path-scurry@1.11.1:
     dependencies:
       lru-cache: 10.4.3
-      minipass: 6.0.2
+      minipass: 7.1.3
 
   path-scurry@2.0.2:
     dependencies:
@@ -10130,6 +10214,12 @@ snapshots:
       scheduler: 0.23.2
 
   react-is@18.3.1: {}
+
+  react-reconciler@0.29.0(react@18.3.1):
+    dependencies:
+      loose-envify: 1.4.0
+      react: 18.3.1
+      scheduler: 0.23.2
 
   react-refresh@0.17.0: {}
 

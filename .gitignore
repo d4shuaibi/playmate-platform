@@ -7,3 +7,11 @@ dist/
 .env.local
 
 .idea/
+
+# Mini program (Taro)
+apps/mini/dist/
+apps/mini/.swc/
+apps/mini/project.private.config.json
+
+# API build output
+services/api/dist/

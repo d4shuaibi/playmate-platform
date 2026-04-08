@@ -1,9 +1,9 @@
 export default defineAppConfig({
-  pages: ["pages/index/index"],
+  pages: ["pages/index/index", "pages/home-user/index", "pages/home-worker/index"],
   window: {
     backgroundTextStyle: "light",
-    navigationBarBackgroundColor: "#ffffff",
+    navigationBarBackgroundColor: "#0b0c10",
     navigationBarTitleText: "Playmate",
-    navigationBarTextStyle: "black"
+    navigationBarTextStyle: "white"
   }
 });
