@@ -1,15 +1,15 @@
 import { View, Text } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import "./index.scss";
+import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import "../../components/bottom-bar/bottom-bar.scss";
+import { getRole } from "../../utils/role";
 
 const UserHomePage = () => {
+  const role = getRole();
   const handleGoWorkerHome = () => {
     void Taro.navigateTo({ url: "/pages/home-worker/index" });
   };
-
-  const handleGoCategory = () => {};
-  const handleGoOrders = () => {};
-  const handleGoMe = () => {};
 
   return (
     <View className="userHome">
@@ -127,22 +127,7 @@ const UserHomePage = () => {
       </View>
 
       <View className="userHome__bottomBar">
-        <View className="userHome__bottomItem userHome__bottomItem--active">
-          <Text className="userHome__bottomIcon">▦</Text>
-          <Text className="userHome__bottomText userHome__bottomText--active">首页</Text>
-        </View>
-        <View className="userHome__bottomItem" onClick={handleGoCategory}>
-          <Text className="userHome__bottomIcon">△</Text>
-          <Text className="userHome__bottomText">分类</Text>
-        </View>
-        <View className="userHome__bottomItem" onClick={handleGoOrders}>
-          <Text className="userHome__bottomIcon">▤</Text>
-          <Text className="userHome__bottomText">订单</Text>
-        </View>
-        <View className="userHome__bottomItem" onClick={handleGoMe}>
-          <Text className="userHome__bottomIcon">👤</Text>
-          <Text className="userHome__bottomText">我的</Text>
-        </View>
+        <BottomBar role={role} activeKey="home" />
       </View>
 
       <View className="userHome__roleSwitch" onClick={handleGoWorkerHome} aria-label="切换到打手端">

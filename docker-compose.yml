@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: playmate-postgres
+    environment:
+      POSTGRES_USER: playmate
+      POSTGRES_PASSWORD: playmate
+      POSTGRES_DB: playmate
+    ports:
+      - "5432:5432"
+    volumes:
+      - playmate_pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: playmate-redis
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    container_name: playmate-api
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgresql://playmate:playmate@postgres:5432/playmate?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3000:3000"
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile
+    container_name: playmate-web
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+
+volumes:
+  playmate_pgdata:
+

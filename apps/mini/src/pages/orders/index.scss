@@ -1,0 +1,28 @@
+.pageShell {
+  min-height: 100vh;
+  background: #0b0c10;
+  color: #e5e7eb;
+  padding: 16px;
+  padding-bottom: 92px;
+}
+
+.pageCard {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 16px;
+}
+
+.pageTitle {
+  font-size: 18px;
+  font-weight: 800;
+  display: block;
+  color: rgba(243, 244, 246, 0.95);
+}
+
+.pageDesc {
+  margin-top: 8px;
+  font-size: 12px;
+  display: block;
+  color: rgba(229, 231, 235, 0.6);
+}
+

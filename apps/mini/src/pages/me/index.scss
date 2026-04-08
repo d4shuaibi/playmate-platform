@@ -1,0 +1,121 @@
+.mePage {
+  min-height: 100vh;
+  background: #0b0c10;
+  color: #e5e7eb;
+  padding: 16px;
+  padding-bottom: 92px;
+}
+
+.mePage__card {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 16px;
+}
+
+.mePage__title {
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(243, 244, 246, 0.95);
+  display: block;
+}
+
+.mePage__desc {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(229, 231, 235, 0.6);
+  display: block;
+}
+
+.mePage__switchRow {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.mePage__switchBtn {
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mePage__switchBtn--activeUser {
+  background: rgba(167, 139, 250, 0.22);
+  border-color: rgba(167, 139, 250, 0.28);
+}
+
+.mePage__switchBtn--activeWorker {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.24);
+}
+
+.mePage__switchText {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(243, 244, 246, 0.9);
+}
+
+.mePage__section {
+  margin-top: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 14px;
+}
+
+.mePage__sectionTitle {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(243, 244, 246, 0.92);
+  display: block;
+}
+
+.mePage__sectionDesc {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(229, 231, 235, 0.58);
+  display: block;
+  line-height: 1.5;
+}
+
+.mePage__cta {
+  margin-top: 12px;
+  height: 40px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.9), rgba(99, 102, 241, 0.7));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mePage__ctaText {
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(17, 24, 39, 0.92);
+}
+
+.mePage__pillRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mePage__pill {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+}
+
+.mePage__pillText {
+  font-size: 11px;
+  color: rgba(229, 231, 235, 0.72);
+  font-weight: 700;
+}
+
