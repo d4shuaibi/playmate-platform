@@ -11,6 +11,7 @@ RUN pnpm install --frozen-lockfile
 COPY apps/admin apps/admin
 COPY packages/shared packages/shared
 
+RUN pnpm -C packages/shared build
 RUN pnpm -C apps/admin build
 
 FROM nginx:1.27-alpine

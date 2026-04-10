@@ -12,12 +12,14 @@ COPY services/api services/api
 RUN pnpm -C services/api prisma:generate
 RUN pnpm -C services/api build
 
+RUN pnpm --filter @playmate/api deploy --prod --legacy /out
+RUN mkdir -p /out/node_modules && cp -R /repo/node_modules/.pnpm/@prisma+client@*/node_modules/.prisma /out/node_modules/.prisma
+
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --from=build /repo/services/api/package.json ./
-COPY --from=build /repo/node_modules ./node_modules
+COPY --from=build /out/ ./
 COPY --from=build /repo/services/api/dist ./dist
 
 EXPOSE 3000
