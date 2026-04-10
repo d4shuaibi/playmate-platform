@@ -3,11 +3,13 @@ import Taro from "@tarojs/taro";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import "../../components/bottom-bar/bottom-bar.scss";
-import { getRole } from "../../utils/role";
+import { getRole, getWorkerPermission, setRole } from "../../utils/role";
 
 const IncomePage = () => {
   const role = getRole();
-  if (role !== "worker") {
+  const hasWorkerPermission = getWorkerPermission();
+  if (role !== "worker" || !hasWorkerPermission) {
+    setRole("user");
     void Taro.showToast({ title: "仅打手可查看收益", icon: "none" });
     void Taro.redirectTo({ url: "/pages/home-user/index" });
     return <View className="pageShell" />;

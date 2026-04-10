@@ -3,10 +3,17 @@ import Taro from "@tarojs/taro";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import "../../components/bottom-bar/bottom-bar.scss";
-import { getRole } from "../../utils/role";
+import { getRole, getWorkerPermission, setRole } from "../../utils/role";
 
 const WorkerHomePage = () => {
   const role = getRole();
+  const hasWorkerPermission = getWorkerPermission();
+  if (!hasWorkerPermission) {
+    setRole("user");
+    void Taro.showToast({ title: "你暂无打手端权限", icon: "none" });
+    void Taro.redirectTo({ url: "/pages/home-user/index" });
+    return <View className="workerHome" />;
+  }
   const handleGoUserHome = () => {
     void Taro.navigateTo({ url: "/pages/home-user/index" });
   };

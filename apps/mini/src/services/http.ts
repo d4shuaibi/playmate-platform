@@ -14,6 +14,7 @@ type RequestOptions = {
 };
 
 export const request = async <TData>(path: string, options: RequestOptions = {}) => {
+  // TODO: 当前页面阶段默认走假数据，完成页面后在调用处逐步接入真实接口。
   const response = await Taro.request<ApiResponse<TData>>({
     url: `${miniEnv.apiBaseUrl}${path}`,
     method: options.method ?? "GET",

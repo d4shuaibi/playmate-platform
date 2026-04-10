@@ -3,7 +3,7 @@ import Taro from "@tarojs/taro";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import "../../components/bottom-bar/bottom-bar.scss";
-import { getRole, setRole, type AppRole } from "../../utils/role";
+import { getRole, getWorkerPermission, setRole, type AppRole } from "../../utils/role";
 
 const roleLabelMap: Record<AppRole, string> = {
   user: "普通用户",
@@ -19,6 +19,10 @@ const MePage = () => {
   };
 
   const handleSwitchToWorker = () => {
+    if (!getWorkerPermission()) {
+      void Taro.showToast({ title: "你暂无打手端权限", icon: "none" });
+      return;
+    }
     setRole("worker");
     void Taro.redirectTo({ url: "/pages/home-worker/index" });
   };
