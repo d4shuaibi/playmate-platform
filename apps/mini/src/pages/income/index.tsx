@@ -2,7 +2,6 @@ import { View, Text } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
-import "../../components/bottom-bar/bottom-bar.scss";
 import { getRole, getWorkerPermission, setRole } from "../../utils/role";
 
 const IncomePage = () => {

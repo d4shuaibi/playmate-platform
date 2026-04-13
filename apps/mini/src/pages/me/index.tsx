@@ -3,7 +3,6 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
-import "../../components/bottom-bar/bottom-bar.scss";
 import { logoutMiniUser } from "../../services/auth";
 import { getRole, getWorkerPermission, setRole } from "../../utils/role";
 import { getToken } from "../../utils/session";

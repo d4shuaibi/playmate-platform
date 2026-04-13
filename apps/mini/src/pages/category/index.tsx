@@ -3,7 +3,6 @@ import Taro from "@tarojs/taro";
 import { useMemo, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
-import "../../components/bottom-bar/bottom-bar.scss";
 import { getRole } from "../../utils/role";
 
 type ServiceCategory = {
