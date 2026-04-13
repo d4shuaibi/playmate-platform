@@ -1,41 +1,135 @@
 .mePage {
   min-height: 100vh;
-  background: #0b0c10;
+  background: linear-gradient(180deg, #090a0f 0%, #0b0c10 48%, #0a0b10 100%);
   color: #e5e7eb;
-  padding: 16px;
-  padding-bottom: 92px;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
-.mePage__card {
+.mePage__scroll {
+  min-height: 100vh;
+  padding-top: calc(env(safe-area-inset-top) + 6px);
+  padding-bottom: 96px;
+  box-sizing: border-box;
+}
+
+.mePage__header {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mePage__headerTitle {
+  font-size: 16px;
+  letter-spacing: 1px;
+  font-weight: 800;
+  color: #c4b5fd;
+}
+
+.mePage__headerIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mePage__headerIconText {
+  font-size: 14px;
+  color: rgba(229, 231, 235, 0.9);
+}
+
+.mePage__profileCard {
+  margin-top: 10px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06);
-  padding: 16px;
+  padding: 16px 14px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(30, 31, 42, 0.96), rgba(20, 21, 31, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.mePage__title {
+.mePage__avatarWrap {
+  position: relative;
+}
+
+.mePage__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid rgba(196, 181, 253, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 30% 30%, #343548, #202332);
+}
+
+.mePage__avatarText {
+  font-size: 30px;
+}
+
+.mePage__profileMain {
+  flex: 1;
+}
+
+.mePage__nickname {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  color: #eef2ff;
+}
+
+.mePage__profileMetaRow {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mePage__profileMeta {
   font-size: 18px;
-  font-weight: 900;
-  color: rgba(243, 244, 246, 0.95);
-  display: block;
+  color: rgba(229, 231, 235, 0.52);
 }
 
-.mePage__desc {
-  margin-top: 8px;
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.6);
-  display: block;
+.mePage__profileMeta--level {
+  color: #34d399;
+  font-weight: 600;
 }
 
-.mePage__switchRow {
+.mePage__assetTag {
+  align-self: flex-end;
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #34d399, #22c55e);
+}
+
+.mePage__assetTagText {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.mePage__switchCard {
   margin-top: 14px;
+  border-radius: 14px;
+  padding: 8px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .mePage__switchBtn {
-  height: 40px;
-  border-radius: 14px;
+  height: 52px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
@@ -44,98 +138,207 @@
 }
 
 .mePage__switchBtn--activeUser {
-  background: rgba(167, 139, 250, 0.22);
-  border-color: rgba(167, 139, 250, 0.28);
+  background: rgba(196, 181, 253, 0.95);
+  border-color: rgba(196, 181, 253, 0.95);
 }
 
 .mePage__switchBtn--activeWorker {
-  background: rgba(16, 185, 129, 0.18);
-  border-color: rgba(16, 185, 129, 0.24);
+  background: rgba(52, 211, 153, 0.3);
+  border-color: rgba(52, 211, 153, 0.5);
 }
 
 .mePage__switchText {
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 800;
   color: rgba(243, 244, 246, 0.9);
 }
 
-.mePage__section {
+.mePage__switchBtn--activeUser .mePage__switchText {
+  color: #111827;
+}
+
+.mePage__balanceCard {
+  margin-top: 16px;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(27, 28, 37, 0.95), rgba(19, 20, 28, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.mePage__balanceLeft {
+  display: flex;
+  flex-direction: column;
+}
+
+.mePage__balanceLabel {
+  font-size: 16px;
+  color: rgba(229, 231, 235, 0.58);
+}
+
+.mePage__balanceAmount {
+  margin-top: 6px;
+  font-size: 20px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.mePage__balanceAction {
+  height: 44px;
+  min-width: 116px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(196, 181, 253, 0.34);
+  background: rgba(167, 139, 250, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mePage__balanceActionText {
+  font-size: 16px;
+  color: #ddd6fe;
+  font-weight: 700;
+}
+
+.mePage__sectionCard {
   margin-top: 16px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
-  padding: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.mePage__sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .mePage__sectionTitle {
-  font-size: 14px;
+  font-size: 26px;
   font-weight: 900;
   color: rgba(243, 244, 246, 0.92);
-  display: block;
 }
 
-.mePage__sectionDesc {
-  margin-top: 8px;
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.58);
-  display: block;
-  line-height: 1.5;
+.mePage__sectionArrow {
+  font-size: 24px;
+  color: rgba(229, 231, 235, 0.48);
 }
 
-.mePage__cta {
-  margin-top: 12px;
-  height: 40px;
+.mePage__stateRow {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.mePage__stateItem {
+  width: 66px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mePage__stateIconWrap {
+  width: 54px;
+  height: 54px;
   border-radius: 14px;
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.9), rgba(99, 102, 241, 0.7));
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.mePage__ctaText {
+.mePage__stateIcon {
+  width: 22px;
+  height: 22px;
+}
+
+.mePage__stateLabel {
+  margin-top: 8px;
   font-size: 13px;
-  font-weight: 900;
-  color: rgba(17, 24, 39, 0.92);
+  color: rgba(229, 231, 235, 0.72);
 }
 
-.mePage__pillRow {
-  margin-top: 10px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.mePage__pill {
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+.mePage__menuRow {
+  height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
-.mePage__pillText {
-  font-size: 11px;
-  color: rgba(229, 231, 235, 0.72);
+.mePage__menuRow + .mePage__menuRow {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mePage__menuLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mePage__menuIcon {
+  width: 22px;
+  height: 22px;
+}
+
+.mePage__menuLabel {
+  font-size: 24px;
+  color: rgba(243, 244, 246, 0.9);
+  font-weight: 600;
+}
+
+.mePage__menuArrow {
+  font-size: 24px;
+  color: rgba(229, 231, 235, 0.44);
+}
+
+.mePage__serviceBtn {
+  margin-top: 16px;
+  margin-bottom: 12px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mePage__serviceBtnIcon {
+  font-size: 18px;
+}
+
+.mePage__serviceBtnText {
+  font-size: 24px;
+  color: #ddd6fe;
   font-weight: 700;
 }
 
 .mePage__logoutRow {
-  margin-top: 12px;
+  margin-top: 10px;
+  margin-bottom: 8px;
 }
 
 .mePage__logoutBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 14px;
+  height: 42px;
   border-radius: 12px;
   border: 1px solid rgba(248, 113, 113, 0.35);
   background: rgba(248, 113, 113, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mePage__logoutText {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: rgba(252, 165, 165, 0.95);
 }
-
