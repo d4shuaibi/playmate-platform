@@ -26,6 +26,8 @@ model User {
 
   nickname  String?
   avatarUrl String?
+  /// 微信 phonenumber.getPhoneNumber 换取的手机号（含区号等，与微信返回一致）
+  phone     String? @unique
 
   workerProfile WorkerProfile?
 }

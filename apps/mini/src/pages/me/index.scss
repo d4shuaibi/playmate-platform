@@ -119,3 +119,23 @@
   font-weight: 700;
 }
 
+.mePage__logoutRow {
+  margin-top: 12px;
+}
+
+.mePage__logoutBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.mePage__logoutText {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(252, 165, 165, 0.95);
+}
+

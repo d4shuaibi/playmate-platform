@@ -1,17 +1,31 @@
 import Taro from "@tarojs/taro";
+import { getToken, setStoredSession, type MiniUserSession } from "./session";
 
 export type AppRole = "user" | "worker";
+
 type WorkerPermissionPayload = {
   hasWorkerPermission?: boolean;
 };
 
 const ROLE_STORAGE_KEY = "playmate.role";
-const TOKEN_STORAGE_KEY = "playmate.token";
+const LEGACY_TOKEN_STORAGE_KEY = "playmate.token";
 const WORKER_PERMISSION_STORAGE_KEY = "playmate.worker.permission";
 
+/** 启动时迁移旧版仅 token 字符串的存储 */
+const migrateLegacyTokenIfNeeded = () => {
+  const legacy = Taro.getStorageSync(LEGACY_TOKEN_STORAGE_KEY) as unknown;
+  if (typeof legacy === "string" && legacy.length > 0) {
+    const next: MiniUserSession = { token: legacy, role: "user" };
+    setStoredSession(next);
+    Taro.removeStorageSync(LEGACY_TOKEN_STORAGE_KEY);
+  }
+};
+
+migrateLegacyTokenIfNeeded();
+
 export const getRole = (): AppRole => {
-  const tokenFromStorage = Taro.getStorageSync(TOKEN_STORAGE_KEY) as unknown;
-  if (typeof tokenFromStorage !== "string" || tokenFromStorage.length === 0) {
+  const tokenFromSession = getToken();
+  if (!tokenFromSession) {
     return "user";
   }
 
@@ -28,8 +42,8 @@ export const setRole = (role: AppRole) => {
 };
 
 export const getWorkerPermission = () => {
-  const tokenFromStorage = Taro.getStorageSync(TOKEN_STORAGE_KEY) as unknown;
-  if (typeof tokenFromStorage !== "string" || tokenFromStorage.length === 0) {
+  const tokenFromSession = getToken();
+  if (!tokenFromSession) {
     return false;
   }
 
@@ -45,10 +59,9 @@ export const resolveWorkerPermission = (payload: WorkerPermissionPayload) => {
   return payload.hasWorkerPermission === true;
 };
 
-export const getToken = () => {
-  return Taro.getStorageSync(TOKEN_STORAGE_KEY) as string | undefined;
+/** 兼容旧调用：写入 token，角色默认 user */
+export const setToken = (token: string) => {
+  setStoredSession({ token, role: "user" });
 };
 
-export const setToken = (token: string) => {
-  Taro.setStorageSync(TOKEN_STORAGE_KEY, token);
-};
+export { getToken } from "./session";

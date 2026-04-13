@@ -1,57 +1,16 @@
 import { Body, Controller, Post } from "@nestjs/common";
-import { PrismaService } from "../../prisma/prisma.service";
-
-type MiniLoginRequest = {
-  code: string;
-};
-
-type MiniLoginResponse = {
-  token: string;
-  role: "user" | "worker";
-};
+import { AuthService, type MiniLoginRequest } from "./auth.service";
 
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly authService: AuthService) {}
 
+  /**
+   * POST /api/auth/mini/login
+   * Body: `{ code }` 为 **getPhoneNumber** 返回的动态令牌；服务端换手机号后按手机号登录或**新建用户**。
+   */
   @Post("mini/login")
   async miniLogin(@Body() body: MiniLoginRequest) {
-    const code = body?.code?.trim();
-    if (!code) {
-      return {
-        code: 400,
-        message: "Missing code",
-        data: null
-      };
-    }
-
-    // DEV NOTE: In production, exchange code for openid/unionid via WeChat API.
-    // For now, treat `code` as a stable openid placeholder to enable end-to-end flow.
-    const openId = code;
-
-    const existingUser = await this.prisma.user.findFirst({
-      where: { wechatOpenId: openId },
-      select: { id: true, role: true }
-    });
-
-    const user =
-      existingUser ??
-      (await this.prisma.user.create({
-        data: {
-          wechatOpenId: openId
-        },
-        select: { id: true, role: true }
-      }));
-
-    const response: MiniLoginResponse = {
-      token: `dev-${user.id}`,
-      role: user.role === "WORKER" ? "worker" : "user"
-    };
-
-    return {
-      code: 0,
-      message: "ok",
-      data: response
-    };
+    return this.authService.miniLogin(body);
   }
 }

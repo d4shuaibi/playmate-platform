@@ -1,9 +1,12 @@
 import { View, Text } from "@tarojs/components";
-import Taro from "@tarojs/taro";
+import Taro, { useDidShow } from "@tarojs/taro";
+import { useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import "../../components/bottom-bar/bottom-bar.scss";
+import { logoutMiniUser } from "../../services/auth";
 import { getRole, getWorkerPermission, setRole, type AppRole } from "../../utils/role";
+import { getToken } from "../../utils/session";
 
 const roleLabelMap: Record<AppRole, string> = {
   user: "普通用户",
@@ -12,6 +15,17 @@ const roleLabelMap: Record<AppRole, string> = {
 
 const MePage = () => {
   const role = getRole();
+  const [loggedIn, setLoggedIn] = useState(() => Boolean(getToken()));
+
+  useDidShow(() => {
+    setLoggedIn(Boolean(getToken()));
+  });
+
+  const handleLogout = () => {
+    logoutMiniUser();
+    setLoggedIn(false);
+    void Taro.showToast({ title: "已退出登录", icon: "none" });
+  };
 
   const handleSwitchToUser = () => {
     setRole("user");
@@ -31,7 +45,17 @@ const MePage = () => {
     <View className="mePage">
       <View className="mePage__card">
         <Text className="mePage__title">我的</Text>
-        <Text className="mePage__desc">当前身份：{roleLabelMap[role]}</Text>
+        <Text className="mePage__desc">
+          当前身份：{roleLabelMap[role]} · {loggedIn ? "已登录" : "未登录"}
+        </Text>
+
+        {loggedIn ? (
+          <View className="mePage__logoutRow">
+            <View className="mePage__logoutBtn" onClick={handleLogout} aria-label="退出登录">
+              <Text className="mePage__logoutText">退出登录</Text>
+            </View>
+          </View>
+        ) : null}
 
         <View className="mePage__switchRow">
           <View

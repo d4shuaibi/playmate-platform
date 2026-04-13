@@ -4,9 +4,9 @@ export type AppConfig = {
 
 export const getAppConfig = (): AppConfig => {
   const portRaw = process.env.PORT;
-  const port = portRaw ? Number(portRaw) : 3000;
+  const port = portRaw ? Number(portRaw) : 3001;
 
   return {
-    port: Number.isFinite(port) ? port : 3000
+    port: Number.isFinite(port) ? port : 3001
   };
 };

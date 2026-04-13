@@ -6,6 +6,7 @@ export default defineAppConfig({
     "pages/orders/index",
     "pages/income/index",
     "pages/me/index",
+    "pages/agreement/index",
     "pages/blank/index"
   ],
   window: {

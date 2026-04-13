@@ -1,18 +1,13 @@
 import { View, Text, Swiper, SwiperItem, ScrollView } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import { Notice, Search, Star, HeartFill } from "@nutui/icons-react-taro";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import { AppIconFont } from "../../components/icon-font/IconFont";
-import {
-  getRole,
-  resolveWorkerPermission,
-  setRole,
-  setToken,
-  setWorkerPermission
-} from "../../utils/role";
-import { request } from "../../services/http";
+import { LoginModal } from "../../components/login-modal/LoginModal";
+import { getRole } from "../../utils/role";
+import { getToken } from "../../utils/session";
 
 type GameTab = {
   key: string;
@@ -139,6 +134,7 @@ const SERVICES: ServiceItem[] = [
 const UserHomePage = () => {
   const role = getRole();
   const [activeGameKey, setActiveGameKey] = useState<string>("all");
+  const [loginOpen, setLoginOpen] = useState(false);
 
   const visibleServices = useMemo(
     () =>
@@ -156,25 +152,13 @@ const UserHomePage = () => {
     setActiveGameKey(gameKey);
   };
 
-  const handleServiceCardClick = async () => {
-    try {
-      // TODO: 页面联调阶段先用假数据，后续这里改成真实后端登录与下单接口。
-      const loginResult = await Taro.login();
-      const apiResult = await request<{
-        token: string;
-        hasWorkerPermission?: boolean;
-      }>("/auth/mini/login", { method: "POST", body: { code: loginResult.code } });
-      setToken(apiResult.data.token);
-      const hasWorkerPermission = resolveWorkerPermission(apiResult.data);
-      setWorkerPermission(hasWorkerPermission);
-      // 登录后统一回到用户端，打手端通过“我的”页手动切换。
-      setRole("user");
-
-      void Taro.showToast({ title: "下单成功（原型）", icon: "none" });
-    } catch (error) {
-      console.log("登录失败", error);
-      void Taro.showToast({ title: "登录失败，请重试", icon: "none" });
+  const handleServiceCardClick = () => {
+    if (!getToken()) {
+      setLoginOpen(true);
+      return;
     }
+
+    void Taro.showToast({ title: "下单成功（原型）", icon: "none" });
   };
 
   return (
@@ -324,6 +308,8 @@ const UserHomePage = () => {
       <View className="userHome__roleSwitch" onClick={handleGoWorkerHome} aria-label="切换到打手端">
         <Text className="userHome__roleSwitchText">打手端</Text>
       </View>
+
+      <LoginModal visible={loginOpen} onClose={() => setLoginOpen(false)} />
     </View>
   );
 };

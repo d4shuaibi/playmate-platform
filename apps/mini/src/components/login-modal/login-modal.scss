@@ -1,0 +1,114 @@
+.loginModal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.loginModal__mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.loginModal__panel {
+  position: relative;
+  width: 100%;
+  max-height: 78vh;
+  padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background: #12131a;
+  border-radius: 16px 16px 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.loginModal__content {
+  margin-bottom: 16px;
+}
+
+.loginModal__intro {
+  display: block;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.loginModal__links {
+  margin-top: 8px;
+}
+
+.loginModal__link {
+  font-size: 14px;
+  color: #a78bfa;
+  text-decoration: underline;
+}
+
+.loginModal__tip {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.loginModal__checkRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.loginModal__checkbox {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-sizing: border-box;
+}
+
+.loginModal__checkbox--on {
+  border-color: #a78bfa;
+  background: #a78bfa;
+}
+
+.loginModal__checkLabel {
+  flex: 1;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.loginModal__actions {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+}
+
+.loginModal__actions--phone {
+  margin-top: 4px;
+}
+
+.loginModal__btn {
+  flex: 1;
+  height: 44px;
+  line-height: 44px;
+  font-size: 15px;
+  border-radius: 10px;
+  padding: 0;
+  margin: 0;
+}
+
+.loginModal__btn--ghost {
+  color: rgba(255, 255, 255, 0.85);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.loginModal__btn--primary {
+  color: #0b0c10;
+  font-weight: 600;
+  background: linear-gradient(90deg, #c4b5fd, #a78bfa);
+  border: none;
+}

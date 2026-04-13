@@ -5,7 +5,7 @@ const config = {
     quiet: false
   },
   env: {
-    TARO_APP_API_BASE_URL: "http://localhost:3000/api"
+    TARO_APP_API_BASE_URL: "http://localhost:3000"
   },
   compiler: {
     type: "vite",
