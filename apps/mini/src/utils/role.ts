@@ -1,5 +1,5 @@
 import Taro from "@tarojs/taro";
-import { getAccessToken, setStoredSession, type MiniUserSession } from "./session";
+import { getToken, setStoredSession, type MiniUserSession } from "./session";
 
 export type AppRole = "user" | "worker";
 
@@ -16,10 +16,10 @@ const migrateLegacyTokenIfNeeded = () => {
   const legacy = Taro.getStorageSync(LEGACY_TOKEN_STORAGE_KEY) as unknown;
   if (typeof legacy === "string" && legacy.length > 0) {
     const next: MiniUserSession = {
-      access_token: legacy,
-      refresh_token: "",
-      expires_at: Date.now() + 24 * 60 * 60 * 1000,
-      token_type: "Bearer",
+      accessToken: legacy,
+      refreshToken: "",
+      expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+      tokenType: "Bearer",
       role: "user"
     };
     setStoredSession(next);
@@ -30,7 +30,7 @@ const migrateLegacyTokenIfNeeded = () => {
 migrateLegacyTokenIfNeeded();
 
 export const getRole = (): AppRole => {
-  const tokenFromSession = getAccessToken();
+  const tokenFromSession = getToken();
   if (!tokenFromSession) {
     return "user";
   }
@@ -48,7 +48,7 @@ export const setRole = (role: AppRole) => {
 };
 
 export const getWorkerPermission = () => {
-  const tokenFromSession = getAccessToken();
+  const tokenFromSession = getToken();
   if (!tokenFromSession) {
     return false;
   }
@@ -68,12 +68,12 @@ export const resolveWorkerPermission = (payload: WorkerPermissionPayload) => {
 /** 兼容旧调用：写入 token，角色默认 user */
 export const setToken = (token: string) => {
   setStoredSession({
-    access_token: token,
-    refresh_token: "",
-    expires_at: Date.now() + 24 * 60 * 60 * 1000,
-    token_type: "Bearer",
+    accessToken: token,
+    refreshToken: "",
+    expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+    tokenType: "Bearer",
     role: "user"
   });
 };
 
-export { getAccessToken as getToken } from "./session";
+export { getToken } from "./session";

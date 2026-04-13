@@ -6,7 +6,7 @@ import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import "../../components/bottom-bar/bottom-bar.scss";
 import { logoutMiniUser } from "../../services/auth";
 import { getRole, getWorkerPermission, setRole } from "../../utils/role";
-import { getAccessToken } from "../../utils/session";
+import { getToken } from "../../utils/session";
 
 type OrderStateItem = {
   key: string;
@@ -62,10 +62,10 @@ const mockMenus: MenuItem[] = [
 
 const MePage = () => {
   const role = getRole();
-  const [loggedIn, setLoggedIn] = useState(() => Boolean(getAccessToken()));
+  const [loggedIn, setLoggedIn] = useState(() => Boolean(getToken()));
 
   useDidShow(() => {
-    const nextLoggedIn = Boolean(getAccessToken());
+    const nextLoggedIn = Boolean(getToken());
     setLoggedIn((prev) => (prev === nextLoggedIn ? prev : nextLoggedIn));
   });
 

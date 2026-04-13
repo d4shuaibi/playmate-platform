@@ -7,8 +7,8 @@ export const apiPaths = {
    * 服务端按手机号登录或新建用户。
    */
   miniLogin: "/api/auth/mini/login",
-  /** POST body: `{ refresh_token }` 刷新 access_token */
-  refresh: "/api/auth/refresh",
-  /** POST：注销（服务端 tokenVersion +1） */
-  logout: "/api/auth/logout"
+  /** POST body: `{ refreshToken }` */
+  miniRefresh: "/api/auth/mini/refresh",
+  /** POST body: `{ refreshToken }` */
+  miniLogout: "/api/auth/mini/logout"
 } as const;

@@ -1,8 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
 import { PrismaService } from "../../prisma/prisma.service";
+import { AuthTokenService, type IssuedTokenBundle } from "./auth-token.service";
 import { WechatPhoneService } from "./wechat-phone.service";
-import { JwtService } from "./jwt.service";
 
 /** Body.code 为 getPhoneNumber 回调中的动态令牌（与 wx.login 的 code 不同） */
 export type MiniLoginRequest = {
@@ -10,10 +10,22 @@ export type MiniLoginRequest = {
 };
 
 type MiniLoginResponseData = {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  token_type: "Bearer";
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  tokenType: "Bearer";
+  role: "user" | "worker";
+};
+
+type MiniRefreshRequest = {
+  refreshToken: string;
+};
+
+type MiniLogoutRequest = {
+  refreshToken: string;
+};
+
+type MiniRefreshResponseData = IssuedTokenBundle & {
   role: "user" | "worker";
 };
 
@@ -27,9 +39,140 @@ export class AuthService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly wechatPhone: WechatPhoneService,
-    private readonly jwtService: JwtService
+    private readonly tokenService: AuthTokenService,
+    private readonly wechatPhone: WechatPhoneService
   ) {}
+
+  /** 只落 refresh token 哈希，避免明文泄露风险 */
+  private hashRefreshToken(token: string) {
+    return createHash("sha256").update(token).digest("hex");
+  }
+
+  /** 登录/刷新后保存新 refresh token，并可选吊销旧 token（轮换） */
+  private async persistRefreshToken(params: {
+    userId: string;
+    refreshToken: string;
+    revokeRefreshToken?: string;
+  }) {
+    const { userId, refreshToken, revokeRefreshToken } = params;
+    const tokenHash = this.hashRefreshToken(refreshToken);
+    const expiresAt = new Date(Date.now() + this.tokenService.getRefreshExpiresInSec() * 1000);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        tokenHash,
+        expiresAt
+      }
+    });
+
+    if (revokeRefreshToken) {
+      const revokeHash = this.hashRefreshToken(revokeRefreshToken);
+      await this.prisma.refreshToken.updateMany({
+        where: {
+          tokenHash: revokeHash,
+          revokedAt: null
+        },
+        data: { revokedAt: new Date() }
+      });
+    }
+  }
+
+  /** 主动退出登录：吊销 refresh token（access token 走短时效自然失效） */
+  async miniLogout(body: MiniLogoutRequest): Promise<ApiEnvelope<{ success: true }>> {
+    const refreshToken = body?.refreshToken?.trim();
+    if (!refreshToken) {
+      return {
+        code: 400,
+        message: "Missing refreshToken",
+        data: null
+      };
+    }
+
+    const tokenHash = this.hashRefreshToken(refreshToken);
+    await this.prisma.refreshToken.updateMany({
+      where: {
+        tokenHash,
+        revokedAt: null
+      },
+      data: { revokedAt: new Date() }
+    });
+
+    return {
+      code: 0,
+      message: "ok",
+      data: { success: true }
+    };
+  }
+
+  async miniRefresh(body: MiniRefreshRequest): Promise<ApiEnvelope<MiniRefreshResponseData>> {
+    const refreshToken = body?.refreshToken?.trim();
+    if (!refreshToken) {
+      return {
+        code: 400,
+        message: "Missing refreshToken",
+        data: null
+      };
+    }
+
+    try {
+      const payload = this.tokenService.verifyRefreshToken(refreshToken);
+      const tokenHash = this.hashRefreshToken(refreshToken);
+      const tokenRecord = await this.prisma.refreshToken.findFirst({
+        where: {
+          tokenHash,
+          revokedAt: null,
+          expiresAt: { gt: new Date() }
+        },
+        select: { id: true, userId: true }
+      });
+
+      if (!tokenRecord || tokenRecord.userId !== payload.sub) {
+        return {
+          code: 401,
+          message: "Refresh token revoked or expired",
+          data: null
+        };
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        select: { id: true, role: true }
+      });
+
+      if (!user) {
+        return {
+          code: 401,
+          message: "User not found",
+          data: null
+        };
+      }
+
+      const appRole = user.role === "WORKER" ? "worker" : "user";
+      const issued = this.tokenService.issueTokens(user.id, appRole);
+      await this.persistRefreshToken({
+        userId: user.id,
+        refreshToken: issued.refreshToken,
+        revokeRefreshToken: refreshToken
+      });
+      return {
+        code: 0,
+        message: "ok",
+        data: {
+          ...issued,
+          role: appRole
+        }
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`miniRefresh failed: ${message}`);
+      return {
+        code: 401,
+        message: "Invalid refresh token",
+        data: null
+      };
+    }
+  }
 
   /**
    * 仅支持手机号登录：用 getPhoneNumber 的 code 换手机号 → 按手机号查用户，无则新建。
@@ -80,36 +223,29 @@ export class AuthService {
     try {
       const existing = await this.prisma.user.findFirst({
         where: { phone: phoneNumber },
-        select: { id: true, role: true, tokenVersion: true }
+        select: { id: true, role: true }
       });
 
       const user =
         existing ??
         (await this.prisma.user.create({
           data: { phone: phoneNumber },
-          select: { id: true, role: true, tokenVersion: true }
+          select: { id: true, role: true }
         }));
 
-      const role = user.role === "WORKER" ? "worker" : "user";
-      const access = this.jwtService.issueAccessToken({
+      const appRole = user.role === "WORKER" ? "worker" : "user";
+      const issued = this.tokenService.issueTokens(user.id, appRole);
+      await this.persistRefreshToken({
         userId: user.id,
-        role,
-        tokenVersion: user.tokenVersion
-      });
-      const refresh = this.jwtService.issueRefreshToken({
-        userId: user.id,
-        tokenVersion: user.tokenVersion
+        refreshToken: issued.refreshToken
       });
 
       return {
         code: 0,
         message: "ok",
         data: {
-          access_token: access.access_token,
-          refresh_token: refresh.refresh_token,
-          expires_in: access.expires_in,
-          token_type: access.token_type,
-          role
+          ...issued,
+          role: appRole
         }
       };
     } catch (error) {
@@ -129,105 +265,15 @@ export class AuthService {
       );
 
       const stableId = createHash("sha256").update(phoneNumber).digest("hex").slice(0, 24);
-      // fallback 不落库，无法 refresh/logout；仍返回 access_token 便于开发联调
-      const access = this.jwtService.issueAccessToken({
-        userId: `fallback-${stableId}`,
-        role: "user",
-        tokenVersion: 0
-      });
+      const issued = this.tokenService.issueTokens(stableId, "user");
       return {
         code: 0,
         message: "ok",
         data: {
-          access_token: access.access_token,
-          refresh_token: "",
-          expires_in: access.expires_in,
-          token_type: access.token_type,
+          ...issued,
           role: "user"
         }
       };
-    }
-  }
-
-  async refreshToken(input: {
-    refresh_token?: string;
-  }): Promise<ApiEnvelope<Omit<MiniLoginResponseData, "role"> & { role: "user" | "worker" }>> {
-    const token = input.refresh_token?.trim();
-    if (!token) {
-      return { code: 400, message: "Missing refresh_token", data: null };
-    }
-
-    try {
-      const payload = this.jwtService.verifyRefreshToken(token);
-      const userId = payload.sub;
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, role: true, tokenVersion: true }
-      });
-      if (!user) {
-        return { code: 401, message: "Invalid refresh_token", data: null };
-      }
-      if (user.tokenVersion !== payload.tv) {
-        return { code: 401, message: "Token revoked", data: null };
-      }
-
-      const role = user.role === "WORKER" ? "worker" : "user";
-      const access = this.jwtService.issueAccessToken({
-        userId: user.id,
-        role,
-        tokenVersion: user.tokenVersion
-      });
-      const refresh = this.jwtService.issueRefreshToken({
-        userId: user.id,
-        tokenVersion: user.tokenVersion
-      });
-
-      return {
-        code: 0,
-        message: "ok",
-        data: {
-          access_token: access.access_token,
-          refresh_token: refresh.refresh_token,
-          expires_in: access.expires_in,
-          token_type: access.token_type,
-          role
-        }
-      };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`refreshToken failed: ${msg}`);
-      return { code: 401, message: "Invalid refresh_token", data: null };
-    }
-  }
-
-  async logout(input: { authorization?: string }): Promise<ApiEnvelope<null>> {
-    const auth = input.authorization?.trim() ?? "";
-    if (!auth.startsWith("Bearer ")) {
-      return { code: 401, message: "Unauthorized", data: null };
-    }
-    const token = auth.slice(7).trim();
-    try {
-      const payload = this.jwtService.verifyAccessToken(token);
-      const userId = payload.sub;
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, tokenVersion: true }
-      });
-      if (!user) {
-        return { code: 401, message: "Unauthorized", data: null };
-      }
-      if (user.tokenVersion !== payload.tv) {
-        return { code: 0, message: "ok", data: null };
-      }
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { tokenVersion: user.tokenVersion + 1 }
-      });
-      return { code: 0, message: "ok", data: null };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      this.logger.warn(`logout failed: ${msg}`);
-      return { code: 401, message: "Unauthorized", data: null };
     }
   }
 }

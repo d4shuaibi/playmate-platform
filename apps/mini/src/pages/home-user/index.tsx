@@ -7,7 +7,7 @@ import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import { AppIconFont } from "../../components/icon-font/IconFont";
 import { LoginModal } from "../../components/login-modal/LoginModal";
 import { getRole } from "../../utils/role";
-import { getAccessToken } from "../../utils/session";
+import { getToken } from "../../utils/session";
 
 type GameTab = {
   key: string;
@@ -153,7 +153,7 @@ const UserHomePage = () => {
   };
 
   const handleServiceCardClick = () => {
-    if (!getAccessToken()) {
+    if (!getToken()) {
       setLoginOpen(true);
       return;
     }

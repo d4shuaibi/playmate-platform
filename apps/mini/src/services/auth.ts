@@ -9,10 +9,10 @@ import { request } from "./http";
 import { apiPaths } from "./api-paths";
 
 type MiniLoginResponse = {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  token_type: "Bearer";
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  tokenType: "Bearer";
   role: "user" | "worker";
 };
 
@@ -33,15 +33,15 @@ export const loginWithPhoneCode = async (phoneCode: string) => {
   });
 
   const data = res.data;
-  if (!data || typeof data.access_token !== "string") {
+  if (!data || typeof data.accessToken !== "string") {
     throw new Error(res.message || "登录返回数据异常");
   }
 
   const session: MiniUserSession = {
-    access_token: data.access_token,
-    refresh_token: data.refresh_token,
-    expires_at: Date.now() + data.expires_in * 1000,
-    token_type: data.token_type,
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken,
+    expiresAt: Date.now() + data.expiresIn * 1000,
+    tokenType: data.tokenType,
     role: data.role
   };
   setStoredSession(session);
@@ -50,36 +50,18 @@ export const loginWithPhoneCode = async (phoneCode: string) => {
   return data;
 };
 
-export const refreshSession = async () => {
-  const refresh_token = getRefreshToken();
-  if (!refresh_token) {
-    throw new Error("Missing refresh_token");
-  }
-  const res = await request<MiniLoginResponse>(apiPaths.refresh, {
-    method: "POST",
-    body: { refresh_token },
-    skipAuth: true
-  });
-  const data = res.data;
-  if (!data?.access_token) {
-    throw new Error(res.message || "刷新失败");
-  }
-  setStoredSession({
-    access_token: data.access_token,
-    refresh_token: data.refresh_token,
-    expires_at: Date.now() + data.expires_in * 1000,
-    token_type: data.token_type,
-    role: data.role
-  });
-  setRole(data.role);
-  setWorkerPermission(data.role === "worker");
-  return data;
-};
-
 /** 清理本地会话与端内权限标记 */
 export const logoutMiniUser = () => {
-  // 尝试通知后端注销（失败也不影响本地清理）
-  void request(apiPaths.logout, { method: "POST", body: {}, skipAuth: false }).catch(() => {});
+  const refreshToken = getRefreshToken();
+  if (refreshToken) {
+    // 主动退出时通知后端吊销 refresh token；失败不阻断本地退出
+    void request(apiPaths.miniLogout, {
+      method: "POST",
+      body: { refreshToken },
+      skipAuth: true
+    }).catch(() => undefined);
+  }
+
   clearStoredSession();
   setWorkerPermission(false);
   setRole("user");

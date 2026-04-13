@@ -20,9 +20,6 @@ model User {
 
   role      UserRole  @default(USER)
 
-  /// Token 版本号：用于 logout/风控使旧 token 失效
-  tokenVersion Int @default(0)
-
   /// WeChat openid / unionid placeholders (to be implemented)
   wechatOpenId  String? @unique
   wechatUnionId String? @unique
@@ -33,6 +30,7 @@ model User {
   phone     String? @unique
 
   workerProfile WorkerProfile?
+  refreshTokens  RefreshToken[]
 }
 
 model WorkerProfile {
@@ -46,5 +44,22 @@ model WorkerProfile {
   primaryGame String
   rankText    String
   specialties String[]
+}
+
+/// 刷新令牌持久化（仅存哈希，不落明文），用于轮换与吊销
+model RefreshToken {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
 }
 

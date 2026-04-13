@@ -2,10 +2,10 @@ import Taro from "@tarojs/taro";
 
 /** 与 services/api AuthController.miniLogin 返回的 data 对齐 */
 export type MiniUserSession = {
-  access_token: string;
-  refresh_token: string;
-  expires_at: number;
-  token_type: "Bearer";
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  tokenType: "Bearer";
   role: "user" | "worker";
 };
 
@@ -13,9 +13,11 @@ const SESSION_STORAGE_KEY = "playmate.wechat.user";
 
 /** 兼容旧版：曾使用 tokenId / standbyToken 结构 */
 type LegacyWechatShape = {
+  accessToken?: string;
+  token?: string;
   tokenId?: string;
   standbyToken?: string;
-  token?: string;
+  role?: "user" | "worker";
 };
 
 /** 将历史存储迁移为 MiniUserSession */
@@ -26,18 +28,22 @@ const migrateStoredSessionIfNeeded = () => {
   }
 
   const legacy = raw as LegacyWechatShape & Partial<MiniUserSession>;
-  if (typeof legacy.access_token === "string" && legacy.access_token.length > 0) {
+  if (typeof legacy.accessToken === "string" && legacy.accessToken.length > 0) {
     return;
   }
 
-  const token = legacy.tokenId || legacy.token;
-  if (typeof token === "string" && token.length > 0) {
+  const fallbackToken =
+    (typeof legacy.token === "string" && legacy.token.length > 0 && legacy.token) ||
+    (typeof legacy.tokenId === "string" && legacy.tokenId.length > 0 && legacy.tokenId) ||
+    "";
+
+  if (fallbackToken) {
     Taro.setStorageSync(SESSION_STORAGE_KEY, {
-      access_token: token,
-      refresh_token: "",
-      expires_at: Date.now() + 24 * 60 * 60 * 1000,
-      token_type: "Bearer",
-      role: "user"
+      accessToken: fallbackToken,
+      refreshToken: "",
+      expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+      tokenType: "Bearer",
+      role: legacy.role === "worker" ? "worker" : "user"
     } satisfies MiniUserSession);
   }
 };
@@ -51,16 +57,19 @@ export const getStoredSession = (): MiniUserSession | null => {
     return null;
   }
   const session = raw as MiniUserSession;
-  if (typeof session.access_token !== "string" || session.access_token.length === 0) {
+  if (typeof session.accessToken !== "string" || session.accessToken.length === 0) {
+    return null;
+  }
+  if (typeof session.refreshToken !== "string") {
+    return null;
+  }
+  if (typeof session.expiresAt !== "number") {
+    return null;
+  }
+  if (session.tokenType !== "Bearer") {
     return null;
   }
   if (session.role !== "user" && session.role !== "worker") {
-    return null;
-  }
-  if (typeof session.expires_at !== "number" || !Number.isFinite(session.expires_at)) {
-    return null;
-  }
-  if (session.token_type !== "Bearer") {
     return null;
   }
   return session;
@@ -76,18 +85,24 @@ export const clearStoredSession = () => {
   Taro.removeStorageSync(SESSION_STORAGE_KEY);
 };
 
-export const getAccessToken = (): string => {
-  return getStoredSession()?.access_token ?? "";
+/** 当前 access token，未登录为空字符串 */
+export const getToken = (): string => {
+  return getStoredSession()?.accessToken ?? "";
 };
 
+/** 当前 refresh token */
 export const getRefreshToken = (): string => {
-  return getStoredSession()?.refresh_token ?? "";
+  return getStoredSession()?.refreshToken ?? "";
 };
 
-export const getExpiresAt = (): number => {
-  return getStoredSession()?.expires_at ?? 0;
+/** access token 过期时间（毫秒时间戳） */
+export const getTokenExpiresAt = (): number => {
+  return getStoredSession()?.expiresAt ?? 0;
 };
 
-export const getTokenType = (): "Bearer" => {
-  return "Bearer";
+/** 是否已过期（预留 30 秒缓冲） */
+export const isAccessTokenExpired = (): boolean => {
+  const expiresAt = getTokenExpiresAt();
+  if (!expiresAt) return true;
+  return Date.now() >= expiresAt - 30_000;
 };
