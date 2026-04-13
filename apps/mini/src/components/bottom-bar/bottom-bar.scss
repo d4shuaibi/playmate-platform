@@ -1,4 +1,4 @@
-.bottomBar {
+.bottom-bar {
   position: fixed;
   left: 0;
   right: 0;
@@ -6,13 +6,14 @@
   height: 78px;
   padding: 10px 18px 22px;
   background: rgba(9, 10, 14, 1);
-  backdrop-filter: blur(10px);
   display: flex;
   justify-content: space-between;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+  z-index: 30;
 }
 
-.bottomBar__item {
+.bottom-bar__item {
   width: 64px;
   display: flex;
   flex-direction: column;
@@ -21,11 +22,11 @@
   transition: transform 0.2s ease;
 }
 
-.bottomBar__item--active {
+.bottom-bar__item--active {
   transform: translateY(-2px);
 }
 
-.bottomBar__iconImage {
+.bottom-bar__icon-image {
   display: block;
   width: 18px;
   height: 18px;
@@ -33,19 +34,19 @@
   transition: all 0.2s ease;
 }
 
-.bottomBar__iconImage--active {
+.bottom-bar__icon-image--active {
   width: 22px;
   height: 22px;
   opacity: 1;
 }
 
-.bottomBar__text {
+.bottom-bar__text {
   font-size: 11px;
   color: rgba(229, 231, 235, 0.45);
   transition: all 0.2s ease;
 }
 
-.bottomBar__text--active {
+.bottom-bar__text--active {
   color: #a78bfa;
   font-weight: 800;
   transform: scale(1.08);
