@@ -1,6 +1,7 @@
 import Taro from "@tarojs/taro";
 import { miniEnv } from "../config/env";
-import { getToken } from "../utils/session";
+import { getAccessToken, getExpiresAt, getTokenType } from "../utils/session";
+import { refreshSession } from "./auth";
 
 type ApiResponse<TData> = {
   code: number;
@@ -23,14 +24,27 @@ type RequestOptions = {
 export const request = async <TData>(path: string, options: RequestOptions = {}) => {
   const url = options.absoluteUrl === true ? path : `${miniEnv.apiBaseUrl}${path}`;
 
-  const token = options.skipAuth === true ? "" : getToken();
+  if (options.skipAuth !== true) {
+    const expiresAt = getExpiresAt();
+    const now = Date.now();
+    const willExpireSoon = expiresAt > 0 && expiresAt - now < 60_000;
+    if (willExpireSoon) {
+      try {
+        await refreshSession();
+      } catch {
+        // refresh 失败交给后续请求报错处理
+      }
+    }
+  }
+
+  const token = options.skipAuth === true ? "" : getAccessToken();
 
   const header: Record<string, string> = {
     "Content-Type": "application/json"
   };
 
   if (options.skipAuth !== true && token.length > 0) {
-    header.Authorization = `Bearer ${token}`;
+    header.Authorization = `${getTokenType()} ${token}`;
   }
 
   let response: Taro.request.SuccessCallbackResult<ApiResponse<TData>>;

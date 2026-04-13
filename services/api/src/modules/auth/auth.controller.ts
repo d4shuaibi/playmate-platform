@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Headers, Post } from "@nestjs/common";
 import { AuthService, type MiniLoginRequest } from "./auth.service";
 
 @Controller("auth")
@@ -12,5 +12,17 @@ export class AuthController {
   @Post("mini/login")
   async miniLogin(@Body() body: MiniLoginRequest) {
     return this.authService.miniLogin(body);
+  }
+
+  /** POST /api/auth/refresh */
+  @Post("refresh")
+  async refresh(@Body() body: { refresh_token?: string }) {
+    return this.authService.refreshToken(body ?? {});
+  }
+
+  /** POST /api/auth/logout */
+  @Post("logout")
+  async logout(@Headers("authorization") authorization: string | undefined) {
+    return this.authService.logout({ authorization });
   }
 }

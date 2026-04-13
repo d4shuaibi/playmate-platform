@@ -20,6 +20,9 @@ model User {
 
   role      UserRole  @default(USER)
 
+  /// Token 版本号：用于 logout/风控使旧 token 失效
+  tokenVersion Int @default(0)
+
   /// WeChat openid / unionid placeholders (to be implemented)
   wechatOpenId  String? @unique
   wechatUnionId String? @unique
