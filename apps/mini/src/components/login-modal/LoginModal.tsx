@@ -43,8 +43,7 @@ export const LoginModal = (props: LoginModalProps) => {
 
   const handleGetPhoneNumber = async (e: { detail: { code?: string; errMsg?: string } }) => {
     if (!isAgreementChecked) {
-      void Taro.showToast({ title: "请先阅读并同意协议", icon: "none" });
-      return;
+      setIsAgreementChecked(true);
     }
     console.log("phone e", e);
     const phoneCode = e.detail?.code;

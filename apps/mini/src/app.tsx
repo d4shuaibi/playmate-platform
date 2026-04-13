@@ -1,7 +1,6 @@
 import { PropsWithChildren } from "react";
 import Taro, { useLaunch } from "@tarojs/taro";
 import "./components/bottom-bar/bottom-bar.scss";
-import "./assets/font/iconfont.css";
 import { setRole } from "./utils/role";
 
 const App = ({ children }: PropsWithChildren) => {

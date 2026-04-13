@@ -1,6 +1,8 @@
 import type { UserConfigExport } from "@tarojs/cli";
 
-const config: UserConfigExport = {
+// NOTE: `@tarojs/cli` 的类型在部分版本下会把 compiler 泛型收窄到 webpack5，
+// 但运行时 Taro 4 支持 `compiler: "vite"`。这里保持与 `config/dev.ts` 一致的写法避免误报。
+const config = {
   projectName: "playmate-mini",
   date: "2026-04-08",
   designWidth: 375,
@@ -20,6 +22,6 @@ const config: UserConfigExport = {
   },
   mini: {},
   h5: {}
-};
+} as unknown as UserConfigExport;
 
 export default config;

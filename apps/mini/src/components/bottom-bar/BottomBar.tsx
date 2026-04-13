@@ -1,9 +1,21 @@
-import { View, Text } from "@tarojs/components";
+import { View, Text, Image } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import type { CSSProperties } from "react";
 import type { AppRole } from "../../utils/role";
 import "./bottom-bar.scss";
-import "../../assets/font/iconfont.css";
+
+import homeIcon from "../../assets/font/首页.svg";
+import homeIconActive from "../../assets/font/首页-active.svg";
+import categoryIcon from "../../assets/font/分类.svg";
+import categoryIconActive from "../../assets/font/分类-active.svg";
+import ordersIcon from "../../assets/font/订单.svg";
+import ordersIconActive from "../../assets/font/订单-active.svg";
+import meIcon from "../../assets/font/我的.svg";
+import meIconActive from "../../assets/font/我的-active.svg";
+import incomeIcon from "../../assets/font/收益.svg";
+import incomeIconActive from "../../assets/font/收益-active.svg";
+import workbenchIcon from "../../assets/font/工作台.svg";
+import workbenchIconActive from "../../assets/font/工作台-active.svg";
 
 type BottomBarKey = "home" | "category" | "orders" | "income" | "me";
 
@@ -15,27 +27,59 @@ type BottomBarProps = {
 type BottomItem = {
   key: BottomBarKey;
   label: string;
-  iconClassName: string;
+  iconSrc: string;
+  activeIconSrc: string;
   url: string;
 };
 
 const USER_ITEMS: BottomItem[] = [
-  { key: "home", label: "首页", iconClassName: "icon-xiazai44", url: "/pages/home-user/index" },
-  { key: "category", label: "分类", iconClassName: "icon-fenlei", url: "/pages/category/index" },
-  { key: "orders", label: "订单", iconClassName: "icon-dingdan", url: "/pages/orders/index" },
-  { key: "me", label: "我的", iconClassName: "icon-wode", url: "/pages/me/index" }
+  {
+    key: "home",
+    label: "首页",
+    iconSrc: homeIcon,
+    activeIconSrc: homeIconActive,
+    url: "/pages/home-user/index"
+  },
+  {
+    key: "category",
+    label: "分类",
+    iconSrc: categoryIcon,
+    activeIconSrc: categoryIconActive,
+    url: "/pages/category/index"
+  },
+  {
+    key: "orders",
+    label: "订单",
+    iconSrc: ordersIcon,
+    activeIconSrc: ordersIconActive,
+    url: "/pages/orders/index"
+  },
+  { key: "me", label: "我的", iconSrc: meIcon, activeIconSrc: meIconActive, url: "/pages/me/index" }
 ];
 
 const WORKER_ITEMS: BottomItem[] = [
   {
     key: "home",
     label: "工作台",
-    iconClassName: "icon-gongzuotai",
+    iconSrc: workbenchIcon,
+    activeIconSrc: workbenchIconActive,
     url: "/pages/home-worker/index"
   },
-  { key: "orders", label: "订单", iconClassName: "icon-dingdan", url: "/pages/orders/index" },
-  { key: "income", label: "收益", iconClassName: "icon-shouyi", url: "/pages/income/index" },
-  { key: "me", label: "我的", iconClassName: "icon-wode", url: "/pages/me/index" }
+  {
+    key: "orders",
+    label: "订单",
+    iconSrc: ordersIcon,
+    activeIconSrc: ordersIconActive,
+    url: "/pages/orders/index"
+  },
+  {
+    key: "income",
+    label: "收益",
+    iconSrc: incomeIcon,
+    activeIconSrc: incomeIconActive,
+    url: "/pages/income/index"
+  },
+  { key: "me", label: "我的", iconSrc: meIcon, activeIconSrc: meIconActive, url: "/pages/me/index" }
 ];
 
 const bottomBarStyle: CSSProperties = {
@@ -67,18 +111,16 @@ const bottomItemActiveStyle: CSSProperties = {
 };
 
 const bottomIconStyle: CSSProperties = {
-  fontSize: "18px",
-  lineHeight: "18px",
+  width: "18px",
+  height: "18px",
   opacity: 0.82,
-  color: "rgba(229, 231, 235, 0.72)",
   transition: "all 0.2s ease",
   display: "block"
 };
 
 const bottomIconActiveStyle: CSSProperties = {
-  fontSize: "22px",
-  lineHeight: "22px",
-  color: "#a78bfa",
+  width: "22px",
+  height: "22px",
   opacity: 1,
   display: "block"
 };
@@ -121,9 +163,12 @@ export const BottomBar = ({ role, activeKey }: BottomBarProps) => {
             aria-label={`切换到${item.label}`}
             style={isActive ? { ...bottomItemStyle, ...bottomItemActiveStyle } : bottomItemStyle}
           >
-            <Text
-              className={`iconfont ${item.iconClassName} bottomBar__icon ${isActive ? "bottomBar__icon--active" : ""}`}
+            <Image
+              className={`bottomBar__iconImage ${isActive ? "bottomBar__iconImage--active" : ""}`}
               style={isActive ? { ...bottomIconStyle, ...bottomIconActiveStyle } : bottomIconStyle}
+              src={isActive ? item.activeIconSrc : item.iconSrc}
+              mode="aspectFit"
+              aria-label={`${item.label}图标`}
             />
             <Text
               className={`bottomBar__text ${isActive ? "bottomBar__text--active" : ""}`}

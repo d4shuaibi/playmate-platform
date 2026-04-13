@@ -25,19 +25,17 @@
   transform: translateY(-2px);
 }
 
-.bottomBar__icon {
+.bottomBar__iconImage {
   display: block;
   width: 18px;
   height: 18px;
   opacity: 0.82;
-  color: rgba(229, 231, 235, 0.72);
   transition: all 0.2s ease;
 }
 
-.bottomBar__icon--active {
+.bottomBar__iconImage--active {
   width: 22px;
   height: 22px;
-  color: #a78bfa;
   opacity: 1;
 }
 
