@@ -3,8 +3,9 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
-import { logoutMiniUser } from "../../services/auth";
-import { getRole, getWorkerPermission, setRole } from "../../utils/role";
+import { logoutMiniUser } from "../../services";
+// import { getRole, getWorkerPermission, setRole } from "../../utils/role";
+import { getRole, setRole } from "../../utils/role";
 import { getToken } from "../../utils/session";
 
 type OrderStateItem = {
@@ -60,12 +61,14 @@ const mockMenus: MenuItem[] = [
 ];
 
 const MePage = () => {
-  const role = getRole();
+  const [role, setCurrentRole] = useState(() => getRole());
   const [loggedIn, setLoggedIn] = useState(() => Boolean(getToken()));
 
   useDidShow(() => {
     const nextLoggedIn = Boolean(getToken());
+    const nextRole = getRole();
     setLoggedIn((prev) => (prev === nextLoggedIn ? prev : nextLoggedIn));
+    setCurrentRole((prev) => (prev === nextRole ? prev : nextRole));
   });
 
   const handleLogout = () => {
@@ -76,15 +79,17 @@ const MePage = () => {
 
   const handleSwitchToUser = () => {
     setRole("user");
+    setCurrentRole("user");
     void Taro.redirectTo({ url: "/pages/home-user/index" });
   };
 
   const handleSwitchToWorker = () => {
-    if (!getWorkerPermission()) {
-      void Taro.showToast({ title: "你暂无打手端权限", icon: "none" });
-      return;
-    }
+    // if (!getWorkerPermission()) {
+    //   void Taro.showToast({ title: "你暂无打手端权限", icon: "none" });
+    //   return;
+    // }
     setRole("worker");
+    setCurrentRole("worker");
     void Taro.redirectTo({ url: "/pages/home-worker/index" });
   };
 
