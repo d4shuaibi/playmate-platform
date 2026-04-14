@@ -1,4 +1,5 @@
 export default definePageConfig({
   navigationBarTitleText: "收益",
-  backgroundColor: "#0b0c10"
+  backgroundColor: "#121416",
+  backgroundColorContent: "#121416"
 });

@@ -1,30 +1,286 @@
 @import "../../components/bottom-bar/bottom-bar.scss";
 
-.pageShell {
+.incomeWorker {
   min-height: 100vh;
-  background: #0b0c10;
-  color: #e5e7eb;
-  padding: 16px;
+  background: #121416;
+  color: #e2e2e5;
+  position: relative;
   padding-bottom: 92px;
 }
 
-.pageCard {
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.06);
-  padding: 16px;
+.incomeWorker__topBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 56px;
+  padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
+  box-sizing: border-box;
+  background: rgba(18, 20, 22, 0.72);
+  backdrop-filter: blur(18px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.pageTitle {
-  font-size: 18px;
+.incomeWorker__brandWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.incomeWorker__brandIcon {
+  font-size: 14px;
+  color: #d0bcff;
+}
+
+.incomeWorker__brandText {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+  color: #d0bcff;
+}
+
+.incomeWorker__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(40, 42, 44, 0.8);
+  border: 1px solid rgba(149, 142, 160, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.incomeWorker__avatarText {
+  font-size: 14px;
+}
+
+.incomeWorker__scroll {
+  min-height: 100vh;
+}
+
+.incomeWorker__body {
+  padding: calc(env(safe-area-inset-top) + 12px) 16px 20px;
+  box-sizing: border-box;
+}
+
+.incomeWorker__heroWrap {
+  position: relative;
+}
+
+.incomeWorker__heroGlow {
+  position: absolute;
+  inset: -3px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(208, 188, 255, 0.22), rgba(78, 222, 163, 0.18));
+  filter: blur(16px);
+  opacity: 0.45;
+}
+
+.incomeWorker__heroCard {
+  position: relative;
+  border-radius: 24px;
+  padding: 18px 16px;
+  background: rgba(26, 28, 30, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.incomeWorker__heroLabel {
+  font-size: 10px;
+  color: rgba(203, 195, 215, 0.68);
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  display: block;
+}
+
+.incomeWorker__heroIncome {
+  margin-top: 6px;
+  font-size: 42px;
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: #d0bcff;
+  display: block;
+}
+
+.incomeWorker__hintCard {
+  margin-top: 14px;
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(40, 42, 44, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.incomeWorker__hintTitle {
+  font-size: 13px;
+  color: rgba(226, 226, 229, 0.95);
   font-weight: 800;
   display: block;
-  color: rgba(243, 244, 246, 0.95);
 }
 
-.pageDesc {
-  margin-top: 8px;
-  font-size: 12px;
+.incomeWorker__hintDesc {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(203, 195, 215, 0.72);
   display: block;
-  color: rgba(229, 231, 235, 0.6);
 }
 
+.incomeWorker__sectionHeader {
+  margin-top: 20px;
+  padding: 0 2px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.incomeWorker__sectionTitle {
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 900;
+  color: rgba(226, 226, 229, 0.98);
+}
+
+.incomeWorker__sectionSub {
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  color: rgba(78, 222, 163, 0.86);
+  font-weight: 800;
+}
+
+.incomeWorker__list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.incomeWorker__record {
+  border-radius: 16px;
+  padding: 12px;
+  box-sizing: border-box;
+  background: #1e2022;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.incomeWorker__record--secondary {
+  border-left: 4px solid rgba(78, 222, 163, 0.5);
+}
+
+.incomeWorker__record--primary {
+  border-left: 4px solid rgba(208, 188, 255, 0.45);
+}
+
+.incomeWorker__record--neutral {
+  border-left: 4px solid rgba(203, 195, 215, 0.25);
+}
+
+.incomeWorker__recordLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.incomeWorker__recordIconWrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(51, 53, 55, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.incomeWorker__recordIcon {
+  font-size: 18px;
+}
+
+.incomeWorker__recordMain {
+  min-width: 0;
+}
+
+.incomeWorker__recordTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(226, 226, 229, 0.96);
+  display: block;
+}
+
+.incomeWorker__recordSub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: rgba(203, 195, 215, 0.65);
+  display: block;
+}
+
+.incomeWorker__recordRight {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.incomeWorker__recordAmount {
+  font-size: 19px;
+  line-height: 1.1;
+  font-weight: 900;
+  display: block;
+}
+
+.incomeWorker__recordAmount--secondary {
+  color: #4edea3;
+}
+
+.incomeWorker__recordAmount--primary {
+  color: #d0bcff;
+}
+
+.incomeWorker__recordAmount--neutral {
+  color: rgba(226, 226, 229, 0.82);
+}
+
+.incomeWorker__recordState {
+  margin-top: 3px;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-weight: 700;
+  display: block;
+}
+
+.incomeWorker__recordState--secondary {
+  color: rgba(78, 222, 163, 0.62);
+}
+
+.incomeWorker__recordState--primary {
+  color: rgba(208, 188, 255, 0.62);
+}
+
+.incomeWorker__recordState--neutral {
+  color: rgba(203, 195, 215, 0.52);
+}
+
+.incomeWorker__historyBtnWrap {
+  margin-top: 14px;
+  padding-bottom: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.incomeWorker__historyBtn {
+  padding: 8px 10px;
+}
+
+.incomeWorker__historyBtnText {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(208, 188, 255, 0.7);
+  font-weight: 800;
+}

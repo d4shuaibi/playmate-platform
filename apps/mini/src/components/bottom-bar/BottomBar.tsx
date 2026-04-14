@@ -68,7 +68,7 @@ const WORKER_ITEMS: BottomItem[] = [
     label: "订单",
     iconSrc: ordersIcon,
     activeIconSrc: ordersIconActive,
-    url: "/pages/orders/index"
+    url: "/pages/worker-orders/index"
   },
   {
     key: "income",

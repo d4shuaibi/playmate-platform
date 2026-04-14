@@ -103,7 +103,7 @@ const WorkerHomePage = () => {
   };
 
   const handleGoAllOrders = () => {
-    void Taro.navigateTo({ url: "/pages/orders/index" });
+    void Taro.navigateTo({ url: "/pages/worker-orders/index" });
   };
 
   const handleStartOrder = (orderId: string) => {
@@ -129,7 +129,7 @@ const WorkerHomePage = () => {
         </View>
       </View>
 
-      <ScrollView scrollY className="workerCommand__scroll">
+      <ScrollView scrollY enhanced showScrollbar={false} className="workerCommand__scroll">
         <View className="workerCommand__content">
           <View className="workerCommand__heroHeader workerCommand__statsCard">
             <View>

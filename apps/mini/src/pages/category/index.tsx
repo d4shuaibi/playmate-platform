@@ -124,7 +124,7 @@ const CategoryPage = () => {
 
       <View className="categoryPage__body">
         <View className="categoryPage__side">
-          <ScrollView className="categoryPage__sideScroll" scrollY enhanced showScrollbar={false}>
+          <View className="categoryPage__sideScroll">
             {mockCategories.map((c) => {
               const isActive = c.key === activeCategoryKey;
               return (
@@ -138,7 +138,7 @@ const CategoryPage = () => {
                 </View>
               );
             })}
-          </ScrollView>
+          </View>
         </View>
 
         <ScrollView className="categoryPage__content" scrollY enhanced showScrollbar={false}>

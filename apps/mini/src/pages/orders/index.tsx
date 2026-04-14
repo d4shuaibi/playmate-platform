@@ -111,6 +111,11 @@ const OrdersPage = () => {
     void Taro.showToast({ title: `${order.actionLabel}：${order.orderNo}`, icon: "none" });
   };
 
+  if (role === "worker") {
+    void Taro.redirectTo({ url: "/pages/worker-orders/index" });
+    return <View className="ordersPage" />;
+  }
+
   return (
     <View className="ordersPage">
       <ScrollView className="ordersPage__scroll" scrollY enhanced showScrollbar={false}>
@@ -118,8 +123,7 @@ const OrdersPage = () => {
           <Text className="ordersPage__heroKicker">任务中心</Text>
           <View className="ordersPage__heroRow">
             <Text className="ordersPage__heroTitle">
-              {role === "worker" ? "接单" : "订单"}{" "}
-              <Text className="ordersPage__heroTitleAccent">历史</Text>
+              订单 <Text className="ordersPage__heroTitleAccent">历史</Text>
             </Text>
             <View className="ordersPage__search">
               <Text className="ordersPage__searchIcon">⌕</Text>
