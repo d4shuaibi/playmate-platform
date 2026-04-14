@@ -107,8 +107,10 @@ const OrdersPage = () => {
   }, [activeTab, keyword]);
 
   const handleAction = (order: OrderCard) => {
-    // TODO(backend): 跳转订单详情 / 拉起支付 / 取消订单等
-    void Taro.showToast({ title: `${order.actionLabel}：${order.orderNo}`, icon: "none" });
+    // TODO(backend): 根据动作类型跳转真实支付页/详情页（当前统一先进入订单详情页）
+    void Taro.navigateTo({
+      url: `/pages/order-detail/index?id=${encodeURIComponent(order.id)}&status=${encodeURIComponent(order.statusKey)}`
+    });
   };
 
   if (role === "worker") {

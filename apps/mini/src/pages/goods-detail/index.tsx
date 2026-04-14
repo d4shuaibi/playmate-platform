@@ -60,8 +60,8 @@ const GoodsDetailPage = () => {
   };
 
   const handleContactService = () => {
-    // TODO(backend): 接入客服会话（在线客服/IM）
-    void Taro.showToast({ title: "客服功能开发中（Mock）", icon: "none" });
+    // TODO(backend): 可追加商品ID参数，用于客服侧定位咨询商品
+    void Taro.navigateTo({ url: "/pages/customer-service/index?from=goods-detail" });
   };
 
   const handlePlaceOrder = () => {

@@ -97,6 +97,11 @@ const MePage = () => {
     void Taro.showToast({ title: `${label}功能开发中`, icon: "none" });
   };
 
+  const handleOpenCustomerService = () => {
+    // TODO(backend): 可传递用户身份与会话上下文，接入真实客服系统
+    void Taro.navigateTo({ url: "/pages/customer-service/index?from=me" });
+  };
+
   return (
     <View className="mePage">
       <ScrollView className="mePage__scroll" scrollY enhanced showScrollbar={false}>
@@ -196,7 +201,7 @@ const MePage = () => {
           ))}
         </View>
 
-        <View className="mePage__serviceBtn" onClick={() => handleFeatureClick("在线客服")}>
+        <View className="mePage__serviceBtn" onClick={handleOpenCustomerService}>
           <Text className="mePage__serviceBtnIcon">🎧</Text>
           <Text className="mePage__serviceBtnText">联系在线客服</Text>
         </View>
