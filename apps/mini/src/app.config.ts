@@ -4,6 +4,7 @@ export default defineAppConfig({
     "pages/home-user/index",
     "pages/home-worker/index",
     "pages/category/index",
+    "pages/goods-detail/index",
     "pages/orders/index",
     "pages/worker-orders/index",
     "pages/income/index",

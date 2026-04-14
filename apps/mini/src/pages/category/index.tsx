@@ -95,8 +95,8 @@ const CategoryPage = () => {
   }, [activeCategoryKey, keyword]);
 
   const handleBuy = (service: ServiceCard) => {
-    // TODO(backend): 跳转下单/服务详情页
-    void Taro.showToast({ title: `选择：${service.title}`, icon: "none" });
+    // TODO(backend): 改为根据 service.id 拉取真实商品详情数据
+    void Taro.navigateTo({ url: `/pages/goods-detail/index?id=${encodeURIComponent(service.id)}` });
   };
 
   return (

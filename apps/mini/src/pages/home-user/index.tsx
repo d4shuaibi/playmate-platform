@@ -152,13 +152,14 @@ const UserHomePage = () => {
     setActiveGameKey(gameKey);
   };
 
-  const handleServiceCardClick = () => {
+  const handleServiceCardClick = (serviceId: string) => {
     if (!getToken()) {
       setLoginOpen(true);
       return;
     }
 
-    void Taro.showToast({ title: "下单成功（原型）", icon: "none" });
+    // TODO(backend): 改为根据 serviceId 查询真实商品详情
+    void Taro.navigateTo({ url: `/pages/goods-detail/index?id=${encodeURIComponent(serviceId)}` });
   };
 
   return (
@@ -280,7 +281,7 @@ const UserHomePage = () => {
             <View
               key={service.id}
               className="userHome__serviceCard"
-              onClick={handleServiceCardClick}
+              onClick={() => handleServiceCardClick(service.id)}
               aria-label={`选择${service.gameName}服务`}
             >
               <View className={`userHome__serviceCover ${service.coverClassName}`}>
