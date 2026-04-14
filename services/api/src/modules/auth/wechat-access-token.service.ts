@@ -2,7 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 
 /**
  * 缓存 `client_credential` access_token，供 getuserphonenumber 等接口使用。
- * @see https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/mp-access-token/getAccessToken.html
+ * 优先使用稳定版接口，避免常规 token 接口在高并发/刷新场景下出现抖动。
+ * @see https://developers.weixin.qq.com/miniprogram/dev/server/API/mp-access-token/api_getstableaccesstoken.html
  */
 @Injectable()
 export class WechatAccessTokenService {
@@ -22,12 +23,17 @@ export class WechatAccessTokenService {
       return this.cache.token;
     }
 
-    const url = new URL("https://api.weixin.qq.com/cgi-bin/token");
-    url.searchParams.set("grant_type", "client_credential");
-    url.searchParams.set("appid", appid);
-    url.searchParams.set("secret", secret);
-
-    const res = await fetch(url);
+    // 稳定版 token 接口仅支持 POST JSON。
+    const res = await fetch("https://api.weixin.qq.com/cgi-bin/stable_token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "client_credential",
+        appid,
+        secret,
+        force_refresh: false
+      })
+    });
     const data = (await res.json()) as {
       access_token?: string;
       expires_in?: number;

@@ -1,6 +1,7 @@
 import { PropsWithChildren } from "react";
 import Taro, { useLaunch } from "@tarojs/taro";
 import { setRole } from "./utils/role";
+import "./app.scss";
 
 const App = ({ children }: PropsWithChildren) => {
   useLaunch((options) => {

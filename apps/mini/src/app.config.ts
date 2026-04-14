@@ -1,4 +1,5 @@
 export default defineAppConfig({
+  lazyCodeLoading: "requiredComponents",
   pages: [
     "pages/home-user/index",
     "pages/home-worker/index",
@@ -11,6 +12,10 @@ export default defineAppConfig({
   ],
   window: {
     backgroundTextStyle: "light",
+    backgroundColor: "#0b0c10",
+    backgroundColorContent: "#0b0c10",
+    backgroundColorTop: "#0b0c10",
+    backgroundColorBottom: "#0b0c10",
     navigationBarBackgroundColor: "#0b0c10",
     navigationBarTitleText: "Playmate",
     navigationBarTextStyle: "white"

@@ -1,0 +1,2 @@
+-- This migration directory existed without SQL content and blocked `prisma migrate deploy`.
+-- Keep it as a no-op migration to preserve migration ordering consistency across environments.

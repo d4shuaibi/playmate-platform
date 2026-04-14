@@ -80,6 +80,72 @@ openspec/        # OpenSpec 工作流产物
 - 已提供 `lint-staged` 与 `.husky/pre-commit`
 - CI 推荐命令：`pnpm check`
 
+## Docker 开发（方案 B）
+
+`docker-compose.yml` 的 `api` 服务已读取 `services/api/.env`（用于注入微信小程序与 JWT 相关配置）。
+
+### 1) 首次启动或依赖变更（需要重建镜像）
+
+```bash
+docker compose up -d --build api
+```
+
+常见场景：
+
+- 修改 `services/api/Dockerfile`
+- `services/api/package.json` / 根 `pnpm-lock.yaml` 变化
+- 你不确定容器是否还是旧代码时
+
+### 2) 仅代码改动（通常不需要重建镜像）
+
+```bash
+docker compose restart api
+```
+
+说明：当前镜像是把构建产物打进容器（非源码挂载开发模式），因此 **TypeScript 代码改动通常仍需要 `--build` 才会进入容器**。`restart` 主要用于重载环境或进程状态，不会重新打包代码。
+
+### 3) 推荐“改完就生效”的标准命令
+
+```bash
+docker compose up -d --build api
+```
+
+### 4) 查看 API 日志
+
+```bash
+docker compose logs -f api
+```
+
+### 5) 登录接口快速自测
+
+```bash
+curl -s -X POST "http://localhost:3000/api/auth/mini/login" \
+  -H "Content-Type: application/json" \
+  -d '{"code":"debug-code"}'
+```
+
+### 6) 自动生成 JWT_SECRET
+
+```bash
+pnpm -C services/api gen:jwt-secret
+```
+
+说明：
+
+- 该命令会自动更新 `services/api/.env` 中的 `JWT_SECRET`（64 字节随机值，Base64 编码）
+- 若 `JWT_SECRET` 不存在会自动追加
+- 使用 Docker 运行 API 时，执行后需重建容器使新密钥生效：
+
+```bash
+docker compose up -d --build api
+```
+
+如只需要临时生成并打印（不写入文件），可用：
+
+```bash
+pnpm -C services/api gen:jwt-secret:print
+```
+
 ## 新成员上手清单
 
 1. 克隆仓库后执行 `pnpm install`

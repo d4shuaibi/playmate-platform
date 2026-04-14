@@ -80,9 +80,30 @@ const WORKER_ITEMS: BottomItem[] = [
   { key: "me", label: "我的", iconSrc: meIcon, activeIconSrc: meIconActive, url: "/pages/me/index" }
 ];
 
+const normalizePagePath = (url: string) => url.replace(/^\//, "");
+
 const navigateByKey = async (url: string, label: string) => {
   try {
-    await Taro.redirectTo({ url });
+    const normalizedTarget = normalizePagePath(url);
+    const pages = Taro.getCurrentPages();
+    const targetIndex = pages.findIndex((page) => page.route === normalizedTarget);
+
+    // 目标页已在栈内：直接回退复用页面实例，避免重新创建页面导致白闪。
+    if (targetIndex >= 0) {
+      const delta = pages.length - 1 - targetIndex;
+      if (delta > 0) {
+        await Taro.navigateBack({ delta });
+      }
+      return;
+    }
+
+    // 栈未命中时优先 navigateTo，尽量保留页面缓存；接近栈上限再退化 redirectTo。
+    if (pages.length >= 9) {
+      await Taro.redirectTo({ url });
+      return;
+    }
+
+    await Taro.navigateTo({ url });
   } catch {
     // TODO: 底部导航页面待补齐时，统一替换为真实页面。
     const fallbackUrl = `/pages/blank/index?title=${encodeURIComponent(label)}&target=${encodeURIComponent(url)}`;
@@ -102,7 +123,12 @@ export const BottomBar = ({ role, activeKey }: BottomBarProps) => {
           <View
             key={item.key}
             className={`bottom-bar__item ${isActive ? "bottom-bar__item--active" : ""}`}
-            onClick={() => void navigateByKey(item.url, item.label)}
+            onClick={() => {
+              if (isActive) {
+                return;
+              }
+              void navigateByKey(item.url, item.label);
+            }}
             aria-label={`切换到${item.label}`}
           >
             <Image

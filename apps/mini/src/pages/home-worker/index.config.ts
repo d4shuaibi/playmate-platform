@@ -1,3 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: "NOCTURNE"
+  navigationBarTitleText: "NOCTURNE",
+  backgroundColor: "#0b0c10"
 });
