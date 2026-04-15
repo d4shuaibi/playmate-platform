@@ -81,8 +81,10 @@ const WorkerOrdersPage = () => {
   }, [workerActiveTab]);
 
   const handleWorkerOrderAction = (order: WorkerOrderCard) => {
-    // TODO(backend): 打手端订单详情跳转与接单流程
-    void Taro.showToast({ title: `${order.actionLabel}：${order.serviceTitle}`, icon: "none" });
+    // TODO(backend): 后续接入真实详情接口参数（如任务类型、阶段、来源场景）
+    void Taro.navigateTo({
+      url: `/pages/worker-order-detail/index?id=${encodeURIComponent(order.id)}&status=${encodeURIComponent(order.statusKey)}`
+    });
   };
 
   return (

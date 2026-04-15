@@ -1,0 +1,344 @@
+.workerOrderDetail {
+  min-height: 100vh;
+  background: #121416;
+  color: #e2e2e5;
+}
+
+.workerOrderDetail__topBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 56px;
+  padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
+  box-sizing: border-box;
+  background: rgba(18, 20, 22, 0.7);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workerOrderDetail__topLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workerOrderDetail__iconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(51, 53, 55, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workerOrderDetail__iconText {
+  font-size: 16px;
+  color: #d0bcff;
+}
+
+.workerOrderDetail__topTitle {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+}
+
+.workerOrderDetail__scroll {
+  min-height: 100vh;
+  padding-top: calc(env(safe-area-inset-top) + 66px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
+  box-sizing: border-box;
+}
+
+.workerOrderDetail__statusSection {
+  padding: 8px 0 4px;
+}
+
+.workerOrderDetail__progressWrap {
+  position: relative;
+  margin: 0 16px;
+}
+
+.workerOrderDetail__line {
+  position: absolute;
+  top: 6px;
+  left: calc(16.666% + 6px);
+  right: calc(16.666% + 6px);
+  height: 2px;
+  background: #333537;
+}
+
+.workerOrderDetail__lineFill {
+  height: 100%;
+  background: #4edea3;
+  box-shadow: 0 0 8px rgba(78, 222, 163, 0.6);
+}
+
+.workerOrderDetail__stepRow {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.workerOrderDetail__stepItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.workerOrderDetail__stepDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #333537;
+  border: 1px solid rgba(149, 142, 160, 0.8);
+}
+
+.workerOrderDetail__stepDot--done {
+  background: #4edea3;
+  border: none;
+}
+
+.workerOrderDetail__stepDot--active {
+  box-shadow: 0 0 0 4px rgba(78, 222, 163, 0.2);
+}
+
+.workerOrderDetail__stepText {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(203, 195, 215, 0.4);
+  font-weight: 600;
+}
+
+.workerOrderDetail__stepText--done {
+  color: rgba(203, 195, 215, 0.8);
+}
+
+.workerOrderDetail__stepText--active {
+  color: #4edea3;
+  font-weight: 800;
+}
+
+.workerOrderDetail__hero {
+  margin: 14px 16px 0;
+  border-radius: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #1a1c1e, #282a2c);
+  border-left: 4px solid #d0bcff;
+  position: relative;
+  overflow: hidden;
+}
+
+.workerOrderDetail__hero::after {
+  content: "";
+  position: absolute;
+  right: -36px;
+  bottom: -36px;
+  width: 130px;
+  height: 130px;
+  border-radius: 999px;
+  background: rgba(208, 188, 255, 0.12);
+  filter: blur(20px);
+}
+
+.workerOrderDetail__heroTag {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(78, 222, 163, 0.14);
+  color: #4edea3;
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 900;
+}
+
+.workerOrderDetail__heroMain {
+  margin-top: 10px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workerOrderDetail__heroTitle {
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.workerOrderDetail__heroSubtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(203, 195, 215, 0.85);
+}
+
+.workerOrderDetail__incomeBlock {
+  text-align: right;
+}
+
+.workerOrderDetail__incomeLabel {
+  font-size: 10px;
+  color: rgba(203, 195, 215, 0.8);
+}
+
+.workerOrderDetail__incomeValue {
+  margin-top: 4px;
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 900;
+  color: #4edea3;
+}
+
+.workerOrderDetail__heroStatus {
+  margin-top: 10px;
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  font-weight: 900;
+  color: #d0bcff;
+}
+
+.workerOrderDetail__heroDesc {
+  margin-top: 6px;
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(203, 195, 215, 0.9);
+}
+
+.workerOrderDetail__section {
+  margin: 14px 16px 0;
+  border-radius: 16px;
+  padding: 14px;
+  box-sizing: border-box;
+  background: #1a1c1e;
+}
+
+.workerOrderDetail__sectionTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workerOrderDetail__sectionIcon {
+  color: #d0bcff;
+  font-size: 13px;
+}
+
+.workerOrderDetail__sectionTitle {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: rgba(203, 195, 215, 0.88);
+}
+
+.workerOrderDetail__directiveList {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.workerOrderDetail__directiveItem {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.workerOrderDetail__directiveDot {
+  margin-top: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #d0bcff;
+  flex-shrink: 0;
+}
+
+.workerOrderDetail__directiveText {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.workerOrderDetail__kvRow {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workerOrderDetail__kvKey {
+  color: rgba(203, 195, 215, 0.78);
+  font-size: 13px;
+}
+
+.workerOrderDetail__kvValue {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.workerOrderDetail__serviceType {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  color: #d0bcff;
+  background: rgba(208, 188, 255, 0.12);
+}
+
+.workerOrderDetail__footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px);
+  box-sizing: border-box;
+  background: rgba(18, 20, 22, 0.82);
+  backdrop-filter: blur(24px);
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+  display: flex;
+  gap: 10px;
+}
+
+.workerOrderDetail__secondaryBtn,
+.workerOrderDetail__primaryBtn {
+  height: 54px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workerOrderDetail__secondaryBtn {
+  flex: 1;
+  border: 1px solid rgba(149, 142, 160, 0.35);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.workerOrderDetail__secondaryBtnText {
+  font-size: 14px;
+  font-weight: 800;
+  color: #e2e2e5;
+}
+
+.workerOrderDetail__primaryBtn {
+  flex: 2;
+  background: linear-gradient(135deg, #d0bcff 0%, #7c4dff 100%);
+}
+
+.workerOrderDetail__primaryBtnText {
+  font-size: 15px;
+  font-weight: 900;
+  color: #121416;
+}

@@ -28,13 +28,6 @@ type PendingOrder = {
   actionText: string;
 };
 
-type AchievementData = {
-  title: string;
-  desc: string;
-  rankText: string;
-  efficiencyText: string;
-};
-
 // TODO(backend): 接入打手工作台汇总接口（今日收益/完成订单/成功率/趋势）
 const mockSummary: WorkbenchSummary = {
   todayIncomeText: "¥1,280",
@@ -72,14 +65,6 @@ const mockPendingOrders: PendingOrder[] = [
   }
 ];
 
-// TODO(backend): 接入打手成就/排名接口（排名、效率、描述）
-const mockAchievement: AchievementData = {
-  title: "指挥官成就：精英打手",
-  desc: "您本周的订单完成速度已超过 94% 的指挥官。继续保持以获取更多高佣金订单分派。",
-  rankText: "94th",
-  efficiencyText: "Top 5%"
-};
-
 const WorkerHomePage = () => {
   const role = getRole();
   // const hasWorkerPermission = getWorkerPermission();
@@ -109,11 +94,6 @@ const WorkerHomePage = () => {
   const handleStartOrder = (orderId: string) => {
     // TODO(backend): 接入开始执行订单接口
     void Taro.showToast({ title: `开始处理订单 ${orderId}（Mock）`, icon: "none" });
-  };
-
-  const handleOpenAchievement = () => {
-    // TODO(backend): 接入打手成就详情页
-    void Taro.showToast({ title: "成就详情开发中（Mock）", icon: "none" });
   };
 
   return (
@@ -220,33 +200,6 @@ const WorkerHomePage = () => {
                 </View>
               </View>
             ))}
-          </View>
-
-          <View
-            className="workerCommand__achievement"
-            onClick={handleOpenAchievement}
-            aria-label="查看打手成就"
-          >
-            <View className="workerCommand__achievementMain">
-              <Text className="workerCommand__achievementTitle">{mockAchievement.title}</Text>
-              <Text className="workerCommand__achievementDesc">{mockAchievement.desc}</Text>
-              <View className="workerCommand__achievementMeta">
-                <View className="workerCommand__achievementMetaItem">
-                  <Text className="workerCommand__achievementMetaValue">
-                    {mockAchievement.rankText}
-                  </Text>
-                  <Text className="workerCommand__achievementMetaLabel">排名</Text>
-                </View>
-                <View className="workerCommand__achievementDivider" />
-                <View className="workerCommand__achievementMetaItem">
-                  <Text className="workerCommand__achievementMetaValue">
-                    {mockAchievement.efficiencyText}
-                  </Text>
-                  <Text className="workerCommand__achievementMetaLabel">效率</Text>
-                </View>
-              </View>
-            </View>
-            <Text className="workerCommand__achievementIcon">🏆</Text>
           </View>
         </View>
       </ScrollView>

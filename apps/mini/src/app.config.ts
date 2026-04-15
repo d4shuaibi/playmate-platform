@@ -9,7 +9,10 @@ export default defineAppConfig({
     "pages/orders/index",
     "pages/order-detail/index",
     "pages/worker-orders/index",
+    "pages/worker-order-detail/index",
     "pages/income/index",
+    "pages/worker-income-history/index",
+    "pages/worker-income-detail/index",
     "pages/me/index",
     "pages/agreement/index",
     "pages/blank/index"

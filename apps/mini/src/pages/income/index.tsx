@@ -81,8 +81,8 @@ const IncomePage = () => {
   };
 
   const handleViewAllHistory = () => {
-    // TODO(backend): 跳转全部收益记录页
-    void Taro.showToast({ title: "收益历史开发中", icon: "none" });
+    // TODO(backend): 后续支持按筛选条件（月份、状态）传参跳转
+    void Taro.navigateTo({ url: "/pages/worker-income-history/index" });
   };
 
   return (

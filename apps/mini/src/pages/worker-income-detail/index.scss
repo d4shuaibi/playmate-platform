@@ -1,0 +1,194 @@
+@import "../../components/bottom-bar/bottom-bar.scss";
+
+.workerIncomeDetail {
+  min-height: 100vh;
+  background: #121416;
+  color: #e2e2e5;
+}
+
+.workerIncomeDetail__scroll {
+  min-height: 100vh;
+  padding-top: calc(env(safe-area-inset-top) + 30px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 110px);
+  box-sizing: border-box;
+}
+
+.workerIncomeDetail__hero {
+  padding: 10px 16px 4px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.workerIncomeDetail__heroIconWrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: rgba(78, 222, 163, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workerIncomeDetail__heroIcon {
+  font-size: 34px;
+  font-weight: 900;
+  color: #4edea3;
+}
+
+.workerIncomeDetail__heroAmount {
+  margin-top: 10px;
+  font-size: 54px;
+  line-height: 1;
+  font-weight: 900;
+  color: #4edea3;
+}
+
+.workerIncomeDetail__heroState {
+  margin-top: 8px;
+  height: 24px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #282a2c;
+  color: rgba(203, 195, 215, 0.9);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.workerIncomeDetail__section {
+  margin: 14px 16px 0;
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+.workerIncomeDetail__orderCard {
+  padding: 16px;
+  background: #1a1c1e;
+  position: relative;
+  overflow: hidden;
+}
+
+.workerIncomeDetail__orderCard::after {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  background: rgba(208, 188, 255, 0.08);
+  filter: blur(30px);
+}
+
+.workerIncomeDetail__kvRow {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.workerIncomeDetail__kvKey {
+  font-size: 13px;
+  color: rgba(203, 195, 215, 0.8);
+}
+
+.workerIncomeDetail__kvValue {
+  font-size: 13px;
+  color: #e2e2e5;
+}
+
+.workerIncomeDetail__kvValue--strong {
+  font-weight: 800;
+}
+
+.workerIncomeDetail__noteCard {
+  padding: 16px;
+  background: #282a2c;
+  border-left: 4px solid rgba(208, 188, 255, 0.45);
+}
+
+.workerIncomeDetail__noteHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workerIncomeDetail__noteIcon {
+  color: #d0bcff;
+}
+
+.workerIncomeDetail__noteTitle {
+  font-size: 13px;
+  font-weight: 900;
+  color: #d0bcff;
+}
+
+.workerIncomeDetail__noteDesc {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(203, 195, 215, 0.9);
+}
+
+.workerIncomeDetail__posterWrap {
+  margin: 16px 16px 0;
+  border-radius: 16px;
+  overflow: hidden;
+  height: 160px;
+  position: relative;
+}
+
+.workerIncomeDetail__poster {
+  width: 100%;
+  height: 100%;
+}
+
+.workerIncomeDetail__posterMask {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #121416 0%, rgba(18, 20, 22, 0.1) 100%);
+}
+
+.workerIncomeDetail__posterTag {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  font-weight: 900;
+  color: #d0bcff;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+
+.workerIncomeDetail__actionWrap {
+  margin: 18px 16px 0;
+}
+
+.workerIncomeDetail__actionBtn {
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #d0bcff 0%, #7c4dff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.workerIncomeDetail__actionBtnIcon {
+  font-size: 18px;
+}
+
+.workerIncomeDetail__actionBtnText {
+  font-size: 15px;
+  font-weight: 900;
+  color: #121416;
+  letter-spacing: 0.8px;
+}

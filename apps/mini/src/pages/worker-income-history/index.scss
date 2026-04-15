@@ -1,0 +1,208 @@
+@import "../../components/bottom-bar/bottom-bar.scss";
+
+.workerIncomeHistory {
+  min-height: 100vh;
+  background: #121416;
+  color: #e2e2e5;
+}
+
+.workerIncomeHistory__scroll {
+  min-height: 100vh;
+  padding-top: calc(env(safe-area-inset-top) + 30px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 104px);
+  box-sizing: border-box;
+}
+
+.workerIncomeHistory__hero {
+  margin: 0 16px;
+  border-radius: 16px;
+  padding: 18px 16px 14px;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #1a1c1e, #121416);
+  position: relative;
+  overflow: hidden;
+}
+
+.workerIncomeHistory__heroGlow {
+  position: absolute;
+  top: -66px;
+  right: -66px;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background: rgba(208, 188, 255, 0.12);
+  filter: blur(80px);
+}
+
+.workerIncomeHistory__heroMain,
+.workerIncomeHistory__heroStats {
+  position: relative;
+  z-index: 1;
+}
+
+.workerIncomeHistory__heroLabel {
+  font-size: 12px;
+  color: rgba(203, 195, 215, 0.86);
+  letter-spacing: 0.8px;
+}
+
+.workerIncomeHistory__heroAmountRow {
+  margin-top: 6px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.workerIncomeHistory__heroAmount {
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 900;
+  color: #d0bcff;
+}
+
+.workerIncomeHistory__heroGrowth {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #4edea3;
+}
+
+.workerIncomeHistory__heroStats {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(149, 142, 160, 0.2);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.workerIncomeHistory__statLabel {
+  font-size: 11px;
+  color: rgba(203, 195, 215, 0.76);
+}
+
+.workerIncomeHistory__statValue {
+  margin-top: 4px;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.workerIncomeHistory__sectionHeader {
+  margin: 18px 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workerIncomeHistory__sectionTitle {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.workerIncomeHistory__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(203, 195, 215, 0.85);
+}
+
+.workerIncomeHistory__filterText {
+  font-size: 13px;
+}
+
+.workerIncomeHistory__filterArrow {
+  font-size: 11px;
+}
+
+.workerIncomeHistory__list {
+  margin: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workerIncomeHistory__record {
+  border-radius: 14px;
+  padding: 14px 12px;
+  box-sizing: border-box;
+  background: rgba(40, 42, 44, 0.4);
+  backdrop-filter: blur(20px);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.workerIncomeHistory__recordLeft {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.workerIncomeHistory__recordIconWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #333537;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.workerIncomeHistory__recordIcon {
+  font-size: 18px;
+}
+
+.workerIncomeHistory__recordMain {
+  min-width: 0;
+}
+
+.workerIncomeHistory__recordTitle {
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.workerIncomeHistory__recordSub {
+  margin-top: 3px;
+  font-size: 11px;
+  color: rgba(203, 195, 215, 0.76);
+}
+
+.workerIncomeHistory__recordTime {
+  margin-top: 2px;
+  font-size: 10px;
+  color: rgba(203, 195, 215, 0.62);
+}
+
+.workerIncomeHistory__recordRight {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.workerIncomeHistory__recordAmount {
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 900;
+  color: #4edea3;
+}
+
+.workerIncomeHistory__state {
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-block;
+}
+
+.workerIncomeHistory__state--settled {
+  color: #4edea3;
+  background: rgba(78, 222, 163, 0.12);
+}
+
+.workerIncomeHistory__state--pending {
+  color: #d0bcff;
+  background: rgba(208, 188, 255, 0.12);
+}

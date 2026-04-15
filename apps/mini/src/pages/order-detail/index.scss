@@ -50,6 +50,7 @@
 .orderDetail__scroll {
   min-height: 100vh;
   padding-top: calc(env(safe-area-inset-top) + 18px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
   box-sizing: border-box;
 }
 

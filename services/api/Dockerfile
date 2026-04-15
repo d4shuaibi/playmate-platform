@@ -5,10 +5,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY services/api/package.json services/api/package.json
 
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --prod=false
 
 COPY services/api services/api
 
+RUN pnpm -C services/api install --frozen-lockfile --prod=false
 RUN pnpm -C services/api prisma:generate
 RUN pnpm -C services/api build
 
