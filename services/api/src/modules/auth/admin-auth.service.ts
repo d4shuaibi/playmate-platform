@@ -41,6 +41,30 @@ type AdminAuthResponseData = AdminTokenBundle & {
   profile: AdminAuthProfile;
 };
 
+type AdminManagerItem = {
+  id: string;
+  name: string;
+  username: string;
+  status: "active" | "disabled";
+  createdAt: string;
+};
+
+type AdminManagerCreateRequest = {
+  name: string;
+  username: string;
+  password: string;
+};
+
+type AdminManagerUpdateRequest = {
+  name?: string;
+  password?: string;
+};
+
+type AdminManagerListFilters = {
+  name?: string;
+  status?: "active" | "disabled";
+};
+
 type ApiEnvelope<T> =
   | { code: 0; message: string; data: T }
   | { code: number; message: string; data: null };
@@ -93,6 +117,10 @@ const normalizeUsername = (username: string) => {
   return username.trim().toLowerCase();
 };
 
+const createManagerId = () => {
+  return `AM-${Math.floor(1000 + Math.random() * 9000)}`;
+};
+
 @Injectable()
 export class AdminAuthService {
   private readonly challengeExpiresInSec = DEFAULT_CHALLENGE_EXPIRES_IN_SEC;
@@ -120,11 +148,14 @@ export class AdminAuthService {
       try {
         const parsed = JSON.parse(envRaw) as AdminAccount[];
         return parsed.map((item) => ({
+          id: item.id?.trim() || createManagerId(),
           username: normalizeUsername(item.username),
           displayName: item.displayName?.trim() || item.username,
           passwordHash: item.passwordHash?.trim().toLowerCase(),
           role: item.role,
-          permissions: item.permissions ?? []
+          permissions: item.permissions ?? [],
+          status: item.status ?? "active",
+          createdAt: item.createdAt ?? new Date().toISOString().slice(0, 10)
         }));
       } catch {
         throw new Error("ADMIN_AUTH_ACCOUNTS_JSON is invalid JSON");
@@ -136,11 +167,14 @@ export class AdminAuthService {
     // dev default account: owner(admin) / Admin#2026
     return [
       {
+        id: "OWN-0001",
         username: "admin",
         displayName: "平台老板",
         passwordHash: sha256Hex("Admin#2026"),
         role: "owner",
-        permissions: this.resolveRolePermissions("owner")
+        permissions: this.resolveRolePermissions("owner"),
+        status: "active",
+        createdAt: "2023-01-01"
       }
     ];
   }
@@ -324,6 +358,9 @@ export class AdminAuthService {
     if (!account) {
       return { code: 401, message: "Invalid username or password", data: null };
     }
+    if (account.status !== "active") {
+      return { code: 403, message: "登录失败，账号已经被禁用！", data: null };
+    }
 
     const expectedProof = sha256Hex(`${account.passwordHash}.${challenge.nonce}`);
     const valid = safeCompareHex(expectedProof, proof);
@@ -366,6 +403,9 @@ export class AdminAuthService {
       if (!account) {
         return { code: 401, message: "Account not found", data: null };
       }
+      if (account.status !== "active") {
+        return { code: 403, message: "登录失败，账号已经被禁用！", data: null };
+      }
 
       record.revokedAt = Date.now();
       const tokens = this.issueTokens(account);
@@ -398,6 +438,147 @@ export class AdminAuthService {
       code: 0,
       message: "ok",
       data: { success: true }
+    };
+  }
+
+  listAdminManagers(
+    filters: AdminManagerListFilters = {}
+  ): ApiEnvelope<{ items: AdminManagerItem[] }> {
+    const notConfigured = this.ensureConfigured();
+    if (notConfigured) return notConfigured;
+    const name = filters.name?.trim().toLowerCase() ?? "";
+    const status = filters.status;
+    return {
+      code: 0,
+      message: "ok",
+      data: {
+        items: this.accounts
+          .filter((item) => item.role === "admin")
+          .filter((item) => {
+            const passName = name ? item.displayName.toLowerCase().includes(name) : true;
+            const passStatus = status ? item.status === status : true;
+            return passName && passStatus;
+          })
+          .map((item) => ({
+            id: item.id,
+            name: item.displayName,
+            username: item.username,
+            status: item.status,
+            createdAt: item.createdAt
+          }))
+      }
+    };
+  }
+
+  getAdminManager(id: string): ApiEnvelope<AdminManagerItem> {
+    const notConfigured = this.ensureConfigured();
+    if (notConfigured) return notConfigured;
+    const manager = this.accounts.find((item) => item.id === id && item.role === "admin");
+    if (!manager) {
+      return { code: 404, message: "Admin manager not found", data: null };
+    }
+    return {
+      code: 0,
+      message: "ok",
+      data: {
+        id: manager.id,
+        name: manager.displayName,
+        username: manager.username,
+        status: manager.status,
+        createdAt: manager.createdAt
+      }
+    };
+  }
+
+  createAdminManager(body: AdminManagerCreateRequest): ApiEnvelope<AdminManagerItem> {
+    const notConfigured = this.ensureConfigured();
+    if (notConfigured) return notConfigured;
+
+    const name = body?.name?.trim();
+    const username = normalizeUsername(body?.username ?? "");
+    const password = body?.password?.trim() ?? "";
+    if (!name || !username || !password) {
+      return { code: 400, message: "Missing required fields", data: null };
+    }
+    if (this.findAccount(username)) {
+      return { code: 409, message: "Username already exists", data: null };
+    }
+
+    const manager: AdminAccount = {
+      id: createManagerId(),
+      username,
+      displayName: name,
+      passwordHash: sha256Hex(password),
+      role: "admin",
+      permissions: this.resolveRolePermissions("admin"),
+      status: "active",
+      createdAt: new Date().toISOString().slice(0, 10)
+    };
+    this.accounts.push(manager);
+    return {
+      code: 0,
+      message: "ok",
+      data: {
+        id: manager.id,
+        name: manager.displayName,
+        username: manager.username,
+        status: manager.status,
+        createdAt: manager.createdAt
+      }
+    };
+  }
+
+  updateAdminManager(id: string, body: AdminManagerUpdateRequest): ApiEnvelope<AdminManagerItem> {
+    const notConfigured = this.ensureConfigured();
+    if (notConfigured) return notConfigured;
+    const manager = this.accounts.find((item) => item.id === id && item.role === "admin");
+    if (!manager) {
+      return { code: 404, message: "Admin manager not found", data: null };
+    }
+
+    const nextName = body?.name?.trim();
+    const nextPassword = body?.password?.trim();
+    if (nextName) {
+      manager.displayName = nextName;
+    }
+    if (nextPassword) {
+      manager.passwordHash = sha256Hex(nextPassword);
+    }
+
+    return {
+      code: 0,
+      message: "ok",
+      data: {
+        id: manager.id,
+        name: manager.displayName,
+        username: manager.username,
+        status: manager.status,
+        createdAt: manager.createdAt
+      }
+    };
+  }
+
+  toggleAdminManagerStatus(
+    id: string,
+    status: "active" | "disabled"
+  ): ApiEnvelope<AdminManagerItem> {
+    const notConfigured = this.ensureConfigured();
+    if (notConfigured) return notConfigured;
+    const manager = this.accounts.find((item) => item.id === id && item.role === "admin");
+    if (!manager) {
+      return { code: 404, message: "Admin manager not found", data: null };
+    }
+    manager.status = status;
+    return {
+      code: 0,
+      message: "ok",
+      data: {
+        id: manager.id,
+        name: manager.displayName,
+        username: manager.username,
+        status: manager.status,
+        createdAt: manager.createdAt
+      }
     };
   }
 

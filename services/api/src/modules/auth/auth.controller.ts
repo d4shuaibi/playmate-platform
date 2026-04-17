@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { type Request } from "express";
 import { AuthService, type MiniLoginRequest } from "./auth.service";
 import { AdminAuthService } from "./admin-auth.service";
@@ -118,5 +118,78 @@ export class AuthController {
       message: "ok",
       data: { granted: true }
     };
+  }
+
+  /**
+   * GET /api/auth/admin/managers
+   * 仅老板可见（admin.manage）
+   */
+  @Get("admin/managers")
+  @UseGuards(AdminAuthGuard, AdminPermissionGuard)
+  @RequireAdminPermissions("admin.manage")
+  async listAdminManagers(
+    @Query("name") name?: string,
+    @Query("status") status?: "active" | "disabled"
+  ) {
+    return this.adminAuthService.listAdminManagers({
+      name: name ?? "",
+      status
+    });
+  }
+
+  /**
+   * GET /api/auth/admin/managers/:id
+   */
+  @Get("admin/managers/:id")
+  @UseGuards(AdminAuthGuard, AdminPermissionGuard)
+  @RequireAdminPermissions("admin.manage")
+  async getAdminManager(@Param("id") id: string) {
+    return this.adminAuthService.getAdminManager(id);
+  }
+
+  /**
+   * POST /api/auth/admin/managers
+   * Body: { name, username, password }
+   */
+  @Post("admin/managers")
+  @UseGuards(AdminAuthGuard, AdminPermissionGuard)
+  @RequireAdminPermissions("admin.manage")
+  async createAdminManager(@Body() body: { name?: string; username?: string; password?: string }) {
+    return this.adminAuthService.createAdminManager({
+      name: body?.name ?? "",
+      username: body?.username ?? "",
+      password: body?.password ?? ""
+    });
+  }
+
+  /**
+   * PATCH /api/auth/admin/managers/:id
+   * Body: { name?, password? }
+   */
+  @Patch("admin/managers/:id")
+  @UseGuards(AdminAuthGuard, AdminPermissionGuard)
+  @RequireAdminPermissions("admin.manage")
+  async updateAdminManager(
+    @Param("id") id: string,
+    @Body() body: { name?: string; password?: string }
+  ) {
+    return this.adminAuthService.updateAdminManager(id, {
+      name: body?.name ?? "",
+      password: body?.password ?? ""
+    });
+  }
+
+  /**
+   * PATCH /api/auth/admin/managers/:id/status
+   * Body: { status: active|disabled }
+   */
+  @Patch("admin/managers/:id/status")
+  @UseGuards(AdminAuthGuard, AdminPermissionGuard)
+  @RequireAdminPermissions("admin.manage")
+  async toggleAdminManagerStatus(
+    @Param("id") id: string,
+    @Body() body: { status?: "active" | "disabled" }
+  ) {
+    return this.adminAuthService.toggleAdminManagerStatus(id, body?.status ?? "active");
   }
 }

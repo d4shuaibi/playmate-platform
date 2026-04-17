@@ -45,3 +45,13 @@ export type AdminAuthSession = {
   profile: AdminAuthProfile;
   remember: boolean;
 };
+
+export type AdminManagerStatus = "active" | "disabled";
+
+export type AdminManager = {
+  id: string;
+  name: string;
+  username: string;
+  status: AdminManagerStatus;
+  createdAt: string;
+};

@@ -18,11 +18,14 @@ export type AdminPermission =
   | "settings.write";
 
 export type AdminAccount = {
+  id: string;
   username: string;
   displayName: string;
   passwordHash: string;
   role: AdminRole;
   permissions: AdminPermission[];
+  status: "active" | "disabled";
+  createdAt: string;
 };
 
 export type AdminAccessPayload = {
