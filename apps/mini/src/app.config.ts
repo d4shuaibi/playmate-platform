@@ -13,6 +13,8 @@ export default defineAppConfig({
     "pages/income/index",
     "pages/worker-income-history/index",
     "pages/worker-income-detail/index",
+    "pages/worker-join/index",
+    "pages/worker-join-progress/index",
     "pages/me/index",
     "pages/agreement/index",
     "pages/blank/index"

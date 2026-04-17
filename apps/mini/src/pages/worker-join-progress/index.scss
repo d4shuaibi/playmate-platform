@@ -1,0 +1,332 @@
+.workerJoinProgress {
+  min-height: 100vh;
+  background: #121416;
+  color: #e2e2e5;
+}
+
+.workerJoinProgress__topBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
+  box-sizing: border-box;
+  background: rgba(18, 20, 22, 0.7);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workerJoinProgress__topLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workerJoinProgress__iconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(40, 42, 44, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workerJoinProgress__iconText {
+  font-size: 16px;
+  color: #d0bcff;
+}
+
+.workerJoinProgress__topTitle {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #d0bcff;
+}
+
+.workerJoinProgress__topGhost {
+  font-size: 12px;
+  color: rgba(203, 195, 215, 0.5);
+}
+
+.workerJoinProgress__scroll {
+  min-height: 100vh;
+  padding-top: calc(env(safe-area-inset-top) + 76px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 110px);
+  box-sizing: border-box;
+}
+
+.workerJoinProgress__heroCard {
+  margin: 0 16px 14px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #1a1c1e;
+  padding: 18px 18px 16px 18px;
+  box-sizing: border-box;
+}
+
+.workerJoinProgress__heroAccent {
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 4px;
+  background: #d0bcff;
+  border-radius: 999px;
+}
+
+.workerJoinProgress__heroIconGhost {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  opacity: 0.06;
+}
+
+.workerJoinProgress__heroIconText {
+  font-size: 120px;
+  color: #e2e2e5;
+}
+
+.workerJoinProgress__heroTitle {
+  padding-left: 10px;
+  font-size: 34px;
+  font-weight: 1000;
+  letter-spacing: -0.5px;
+}
+
+.workerJoinProgress__heroDesc {
+  padding-left: 10px;
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(203, 195, 215, 0.85);
+}
+
+.workerJoinProgress__timelineCard {
+  margin: 0 16px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #282a2c;
+  padding: 18px;
+  box-sizing: border-box;
+}
+
+.workerJoinProgress__timelineHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.workerJoinProgress__timelineLabel {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: #d0bcff;
+}
+
+.workerJoinProgress__refChip {
+  background: rgba(208, 188, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.workerJoinProgress__refChipText {
+  font-size: 10px;
+  font-weight: 900;
+  color: #d0bcff;
+  letter-spacing: -0.2px;
+}
+
+.workerJoinProgress__timeline {
+  position: relative;
+  padding-left: 2px;
+}
+
+.workerJoinProgress__timelineLine {
+  position: absolute;
+  left: 24px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #333537;
+}
+
+.workerJoinProgress__step {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding-left: 2px;
+}
+
+.workerJoinProgress__step--spaced {
+  margin-bottom: 28px;
+}
+
+.workerJoinProgress__stepActiveLine {
+  position: absolute;
+  left: 24px;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background: linear-gradient(180deg, #4edea3 0%, rgba(208, 188, 255, 0.5) 100%);
+}
+
+.workerJoinProgress__stepIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 48px;
+  z-index: 2;
+}
+
+.workerJoinProgress__stepIconText {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.workerJoinProgress__stepIcon--done {
+  background: #4edea3;
+  color: #003824;
+  box-shadow: 0 0 20px rgba(78, 222, 163, 0.3);
+}
+
+.workerJoinProgress__stepIcon--active {
+  background: #d0bcff;
+  color: #3c0091;
+  box-shadow: 0 0 30px rgba(208, 188, 255, 0.4);
+  animation: workerJoinProgressPulse 1.4s ease-in-out infinite;
+}
+
+.workerJoinProgress__stepIcon--todo {
+  background: #333537;
+  color: #958ea0;
+}
+
+.workerJoinProgress__stepIcon--failed {
+  background: rgba(255, 180, 171, 0.18);
+  color: #ffb4ab;
+  box-shadow: 0 0 18px rgba(255, 180, 171, 0.15);
+}
+
+.workerJoinProgress__stepMain {
+  flex: 1;
+  padding-top: 2px;
+}
+
+.workerJoinProgress__stepTitle {
+  font-size: 20px;
+  font-weight: 1000;
+  color: #e2e2e5;
+}
+
+.workerJoinProgress__stepTitle--active {
+  color: #d0bcff;
+}
+
+.workerJoinProgress__stepTitle--todo {
+  color: #958ea0;
+}
+
+.workerJoinProgress__stepTitle--failed {
+  color: #ffb4ab;
+}
+
+.workerJoinProgress__stepSub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(203, 195, 215, 0.75);
+}
+
+.workerJoinProgress__timestampChip {
+  margin-top: 8px;
+  display: inline-flex;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: rgba(78, 222, 163, 0.06);
+}
+
+.workerJoinProgress__timestampText {
+  font-size: 10px;
+  color: #4edea3;
+  font-weight: 700;
+}
+
+.workerJoinProgress__hintBox {
+  margin-top: 10px;
+  border-radius: 12px;
+  padding: 10px 10px;
+  background: rgba(208, 188, 255, 0.1);
+}
+
+.workerJoinProgress__hintText {
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(208, 188, 255, 0.85);
+}
+
+.workerJoinProgress__bgGlow {
+  position: absolute;
+  right: -60px;
+  bottom: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background: rgba(208, 188, 255, 0.07);
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.workerJoinProgress__footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px);
+  box-sizing: border-box;
+  background: linear-gradient(
+    to top,
+    rgba(18, 20, 22, 0.98) 0%,
+    rgba(18, 20, 22, 0.9) 45%,
+    rgba(18, 20, 22, 0) 100%
+  );
+}
+
+.workerJoinProgress__primaryBtn {
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #d0bcff 0%, #a078ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workerJoinProgress__primaryBtnText {
+  font-size: 18px;
+  font-weight: 900;
+  color: #121416;
+  letter-spacing: 0.8px;
+}
+
+@keyframes workerJoinProgressPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

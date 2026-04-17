@@ -102,6 +102,19 @@ const MePage = () => {
     void Taro.navigateTo({ url: "/pages/customer-service/index?from=me" });
   };
 
+  const handleOpenWorkerJoin = () => {
+    // TODO(backend): 后续根据后端返回的入驻状态（未申请/审核中/已通过/已拒绝）决定跳转到不同页面
+    void Taro.navigateTo({ url: "/pages/worker-join/index" });
+  };
+
+  const handleMenuClick = (menu: MenuItem) => {
+    if (menu.key === "join") {
+      handleOpenWorkerJoin();
+      return;
+    }
+    handleFeatureClick(menu.label);
+  };
+
   return (
     <View className="mePage">
       <ScrollView className="mePage__scroll" scrollY enhanced showScrollbar={false}>
@@ -182,11 +195,7 @@ const MePage = () => {
 
         <View className="mePage__sectionCard">
           {mockMenus.map((menu) => (
-            <View
-              key={menu.key}
-              className="mePage__menuRow"
-              onClick={() => handleFeatureClick(menu.label)}
-            >
+            <View key={menu.key} className="mePage__menuRow" onClick={() => handleMenuClick(menu)}>
               <View className="mePage__menuLeft">
                 <Image
                   className="mePage__menuIcon"
