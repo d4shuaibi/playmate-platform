@@ -4,7 +4,7 @@ const toHex = (buffer: ArrayBuffer) => {
     .join("");
 };
 
-const sha256Hex = async (value: string) => {
+export const sha256Hex = async (value: string) => {
   const encoder = new TextEncoder();
   const data = encoder.encode(value);
   const digest = await crypto.subtle.digest("SHA-256", data);

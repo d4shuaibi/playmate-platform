@@ -149,33 +149,35 @@ export class AuthController {
 
   /**
    * POST /api/auth/admin/managers
-   * Body: { name, username, password }
+   * Body: { name, username, passwordHash }
    */
   @Post("admin/managers")
   @UseGuards(AdminAuthGuard, AdminPermissionGuard)
   @RequireAdminPermissions("admin.manage")
-  async createAdminManager(@Body() body: { name?: string; username?: string; password?: string }) {
+  async createAdminManager(
+    @Body() body: { name?: string; username?: string; passwordHash?: string }
+  ) {
     return this.adminAuthService.createAdminManager({
       name: body?.name ?? "",
       username: body?.username ?? "",
-      password: body?.password ?? ""
+      passwordHash: body?.passwordHash ?? ""
     });
   }
 
   /**
    * PATCH /api/auth/admin/managers/:id
-   * Body: { name?, password? }
+   * Body: { name?, passwordHash? }
    */
   @Patch("admin/managers/:id")
   @UseGuards(AdminAuthGuard, AdminPermissionGuard)
   @RequireAdminPermissions("admin.manage")
   async updateAdminManager(
     @Param("id") id: string,
-    @Body() body: { name?: string; password?: string }
+    @Body() body: { name?: string; passwordHash?: string }
   ) {
     return this.adminAuthService.updateAdminManager(id, {
       name: body?.name ?? "",
-      password: body?.password ?? ""
+      passwordHash: body?.passwordHash ?? ""
     });
   }
 

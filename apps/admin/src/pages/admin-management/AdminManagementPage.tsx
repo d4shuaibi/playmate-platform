@@ -8,9 +8,10 @@ import {
   requestCreateAdminManager,
   requestToggleAdminManagerStatus,
   requestUpdateAdminManager
-} from "../services/auth/api";
-import { getAdminAuthSession } from "../services/auth/session";
-import { type AdminManager, type AdminManagerStatus } from "../services/auth/types";
+} from "../../services/auth/api";
+import { sha256Hex } from "../../services/auth/crypto";
+import { getAdminAuthSession } from "../../services/auth/session";
+import { type AdminManager, type AdminManagerStatus } from "../../services/auth/types";
 
 type DrawerMode = "create" | "edit" | "view";
 
@@ -102,18 +103,19 @@ export const AdminManagementPage = () => {
         setSubmitLoading(true);
 
         if (drawerMode === "create") {
+          const passwordHash = await sha256Hex(values.password);
           await requestCreateAdminManager(accessToken, {
             name: values.name.trim(),
             username: values.username.trim(),
-            password: values.password
+            passwordHash
           });
           message.success("管理员创建成功");
         } else if (drawerMode === "edit" && currentRow) {
-          const updatePayload: { name?: string; password?: string } = {
+          const updatePayload: { name?: string; passwordHash?: string } = {
             name: values.name.trim()
           };
           if (values.password.trim()) {
-            updatePayload.password = values.password;
+            updatePayload.passwordHash = await sha256Hex(values.password);
           }
           await requestUpdateAdminManager(accessToken, currentRow.id, updatePayload);
           message.success("管理员更新成功");

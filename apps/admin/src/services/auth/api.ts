@@ -145,7 +145,7 @@ export const requestAdminManagerDetail = (accessToken: string, managerId: string
 
 export const requestCreateAdminManager = (
   accessToken: string,
-  body: { name: string; username: string; password: string }
+  body: { name: string; username: string; passwordHash: string }
 ) => {
   return postAuthed<AdminManager>("/auth/admin/managers", accessToken, body);
 };
@@ -153,7 +153,7 @@ export const requestCreateAdminManager = (
 export const requestUpdateAdminManager = (
   accessToken: string,
   managerId: string,
-  body: { name?: string; password?: string }
+  body: { name?: string; passwordHash?: string }
 ) => {
   return patchAuthed<AdminManager>(
     `/auth/admin/managers/${encodeURIComponent(managerId)}`,

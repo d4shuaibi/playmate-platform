@@ -4,9 +4,10 @@ import { HomePage } from "../pages/HomePage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { LoginPage } from "../pages/LoginPage";
 import { RequireAdminAuth, RequireAdminPermission, RequireAdminRole } from "./guards/AdminGuards";
-import { SystemOverviewPage } from "../pages/SystemOverviewPage";
-import { CustomerServiceManagementPage } from "../pages/CustomerServiceManagementPage";
-import { AdminManagementPage } from "../pages/AdminManagementPage";
+import { SystemOverviewPage } from "../pages/system-overview/SystemOverviewPage";
+import { CustomerServiceManagementPage } from "../pages/customer-service-management/CustomerServiceManagementPage";
+import { CreateCustomerServicePage } from "../pages/customer-service-management/CreateCustomerServicePage";
+import { AdminManagementPage } from "../pages/admin-management/AdminManagementPage";
 import { getAdminAuthSession, getAdminDefaultPath } from "../services/auth/session";
 
 const NavigateToDefaultPage = () => {
@@ -42,6 +43,14 @@ export const AppRouter = () => {
             element={
               <RequireAdminPermission permission="customer_service.write">
                 <CustomerServiceManagementPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/customer-service-management/create"
+            element={
+              <RequireAdminPermission permission="customer_service.write">
+                <CreateCustomerServicePage />
               </RequireAdminPermission>
             }
           />

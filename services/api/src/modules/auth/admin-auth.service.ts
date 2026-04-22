@@ -52,12 +52,12 @@ type AdminManagerItem = {
 type AdminManagerCreateRequest = {
   name: string;
   username: string;
-  password: string;
+  passwordHash: string;
 };
 
 type AdminManagerUpdateRequest = {
   name?: string;
-  password?: string;
+  passwordHash?: string;
 };
 
 type AdminManagerListFilters = {
@@ -119,6 +119,10 @@ const normalizeUsername = (username: string) => {
 
 const createManagerId = () => {
   return `AM-${Math.floor(1000 + Math.random() * 9000)}`;
+};
+
+const isSha256Hex = (value: string) => {
+  return /^[a-f0-9]{64}$/.test(value);
 };
 
 @Injectable()
@@ -496,9 +500,12 @@ export class AdminAuthService {
 
     const name = body?.name?.trim();
     const username = normalizeUsername(body?.username ?? "");
-    const password = body?.password?.trim() ?? "";
-    if (!name || !username || !password) {
+    const passwordHash = body?.passwordHash?.trim().toLowerCase() ?? "";
+    if (!name || !username || !passwordHash) {
       return { code: 400, message: "Missing required fields", data: null };
+    }
+    if (!isSha256Hex(passwordHash)) {
+      return { code: 400, message: "Invalid password hash", data: null };
     }
     if (this.findAccount(username)) {
       return { code: 409, message: "Username already exists", data: null };
@@ -508,7 +515,7 @@ export class AdminAuthService {
       id: createManagerId(),
       username,
       displayName: name,
-      passwordHash: sha256Hex(password),
+      passwordHash,
       role: "admin",
       permissions: this.resolveRolePermissions("admin"),
       status: "active",
@@ -537,12 +544,15 @@ export class AdminAuthService {
     }
 
     const nextName = body?.name?.trim();
-    const nextPassword = body?.password?.trim();
+    const nextPasswordHash = body?.passwordHash?.trim().toLowerCase();
     if (nextName) {
       manager.displayName = nextName;
     }
-    if (nextPassword) {
-      manager.passwordHash = sha256Hex(nextPassword);
+    if (nextPasswordHash) {
+      if (!isSha256Hex(nextPasswordHash)) {
+        return { code: 400, message: "Invalid password hash", data: null };
+      }
+      manager.passwordHash = nextPasswordHash;
     }
 
     return {

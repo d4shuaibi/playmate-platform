@@ -1,12 +1,8 @@
-import {
-  FilterOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  TeamOutlined
-} from "@ant-design/icons";
-import { Avatar, Button, Card, Input, Select, Tag, Typography, message } from "antd";
-import { useMemo, useState } from "react";
+import { PlusOutlined, ReloadOutlined, TeamOutlined } from "@ant-design/icons";
+import { Avatar, Button, Card, Form, Input, Select, Table, Tag, Typography, message } from "antd";
+import { type ColumnsType } from "antd/es/table";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 type ServiceAgentStatus = "online" | "offline" | "busy";
 type ServiceAgentRole = "admin" | "specialist";
@@ -122,26 +118,43 @@ const statusTagColorMap: Record<ServiceAgentStatus, string> = {
 export const CustomerServiceManagementPage = () => {
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ServiceAgentStatus>("all");
+  const [rows, setRows] = useState<ServiceAgent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const filteredAgents = useMemo(() => {
-    return mockAgents.filter((agent) => {
+  const currentQuery = {
+    keyword: keyword.trim(),
+    status: statusFilter === "all" ? undefined : statusFilter
+  };
+
+  const loadAgents = useCallback((filters?: { keyword?: string; status?: ServiceAgentStatus }) => {
+    setLoading(true);
+    // TODO(backend): 用 keyword/status 参数请求客服管理列表接口
+    const nextRows = mockAgents.filter((agent) => {
+      const normalizedKeyword = filters?.keyword?.trim().toLowerCase() ?? "";
       const hitKeyword =
-        keyword.trim().length === 0 ||
-        agent.name.includes(keyword.trim()) ||
-        agent.id.toLowerCase().includes(keyword.trim().toLowerCase()) ||
-        agent.teamName.includes(keyword.trim());
-      const hitStatus = statusFilter === "all" || agent.status === statusFilter;
+        normalizedKeyword.length === 0 ||
+        agent.name.toLowerCase().includes(normalizedKeyword) ||
+        agent.id.toLowerCase().includes(normalizedKeyword) ||
+        agent.teamName.toLowerCase().includes(normalizedKeyword);
+      const hitStatus = !filters?.status || agent.status === filters.status;
       return hitKeyword && hitStatus;
     });
-  }, [keyword, statusFilter]);
+    setRows(nextRows);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadAgents();
+  }, [loadAgents]);
 
   const handleCreateServiceAgent = () => {
-    // TODO(backend): 打开新增客服弹窗，提交至创建客服接口
-    message.info("新增客服功能开发中");
+    void navigate("/customer-service-management/create");
   };
 
   const handleRefresh = () => {
-    // TODO(backend): 重新请求客服列表接口
+    // TODO(backend): 重新请求客服列表接口（保留当前筛选参数）
+    loadAgents(currentQuery);
     message.success("已刷新（Mock）");
   };
 
@@ -152,6 +165,100 @@ export const CustomerServiceManagementPage = () => {
     // TODO(backend): 根据 action 跳转/调用对应接口（详情、编辑、权限配置、禁用）
     message.info(`${agent.name} - ${action}（Mock）`);
   };
+
+  const handleSearch = () => {
+    loadAgents(currentQuery);
+  };
+
+  const handleResetSearch = () => {
+    setKeyword("");
+    setStatusFilter("all");
+    loadAgents();
+  };
+
+  const columns: ColumnsType<ServiceAgent> = [
+    {
+      title: "客服姓名",
+      dataIndex: "name",
+      key: "name",
+      render: (_, agent) => (
+        <div className="flex items-center gap-3">
+          <Avatar size={32} src={agent.avatarUrl} />
+          <div>
+            <p className="text-sm font-semibold">{agent.name}</p>
+            <p className="text-[10px] text-slate-500">ID: {agent.id}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "角色",
+      dataIndex: "role",
+      key: "role",
+      render: (role: ServiceAgentRole) => (
+        <Tag color={role === "admin" ? "blue" : "default"}>{roleLabelMap[role]}</Tag>
+      )
+    },
+    {
+      title: "所属小组",
+      dataIndex: "teamName",
+      key: "teamName"
+    },
+    {
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
+      render: (status: ServiceAgentStatus) => (
+        <Tag color={statusTagColorMap[status]}>{statusLabelMap[status]}</Tag>
+      )
+    },
+    {
+      title: "处理订单",
+      dataIndex: "handledOrderCount",
+      key: "handledOrderCount",
+      render: (_, agent) => (
+        <div>
+          <p className="text-sm font-medium">{agent.handledOrderCount.toLocaleString()}</p>
+          <div className="mt-1.5 h-1.5 w-24 rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-blue-500"
+              style={{ width: `${agent.completionRatio}%` }}
+            />
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "创建时间",
+      dataIndex: "createdAt",
+      key: "createdAt"
+    },
+    {
+      title: "操作",
+      key: "actions",
+      render: (_, agent) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button type="text" size="small" onClick={() => handleAgentAction(agent, "view")}>
+            查看
+          </Button>
+          <Button type="text" size="small" onClick={() => handleAgentAction(agent, "edit")}>
+            编辑
+          </Button>
+          <Button type="text" size="small" onClick={() => handleAgentAction(agent, "permission")}>
+            权限
+          </Button>
+          <Button
+            danger
+            type="text"
+            size="small"
+            onClick={() => handleAgentAction(agent, "disable")}
+          >
+            禁用
+          </Button>
+        </div>
+      )
+    }
+  ];
 
   return (
     <div className="space-y-6">
@@ -174,163 +281,51 @@ export const CustomerServiceManagementPage = () => {
         </Button>
       </div>
 
-      <Card className="rounded-2xl border-0 shadow-sm" bodyStyle={{ padding: 20 }}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-1 flex-wrap items-center gap-3">
+      <div className="rounded-xl bg-white p-3">
+        <Form className="flex flex-wrap items-end gap-3" layout="inline" onFinish={handleSearch}>
+          <Form.Item className="mb-0 min-w-[260px] flex-1" label="客服关键词">
             <Input
               allowClear
               value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className="!max-w-sm !rounded-xl"
-              prefix={<SearchOutlined className="text-slate-400" />}
-              placeholder="搜索客服姓名、ID或小组..."
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="请输入客服姓名、ID或小组"
             />
-            <div className="flex items-center gap-2">
-              <Typography.Text className="!text-xs !font-semibold !uppercase !tracking-wider !text-slate-500">
-                状态:
-              </Typography.Text>
-              <Select
-                value={statusFilter}
-                onChange={(value) => setStatusFilter(value)}
-                className="!w-36"
-                options={[
-                  { label: "全部", value: "all" },
-                  { label: "在线", value: "online" },
-                  { label: "离线", value: "offline" },
-                  { label: "忙碌", value: "busy" }
-                ]}
-              />
+          </Form.Item>
+          <Form.Item className="mb-0 w-[220px]" label="客服状态">
+            <Select
+              className="w-full"
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value)}
+              options={[
+                { label: "全部状态", value: "all" },
+                { label: "在线", value: "online" },
+                { label: "离线", value: "offline" },
+                { label: "忙碌", value: "busy" }
+              ]}
+            />
+          </Form.Item>
+          <Form.Item className="mb-0">
+            <div className="flex items-end gap-2">
+              <Button type="primary" htmlType="submit">
+                查询
+              </Button>
+              <Button onClick={handleResetSearch}>重置</Button>
+              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                刷新
+              </Button>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button icon={<FilterOutlined />} />
-            <Button icon={<ReloadOutlined />} onClick={handleRefresh} />
-          </div>
-        </div>
-      </Card>
+          </Form.Item>
+        </Form>
+      </div>
 
       <Card className="rounded-2xl border-0 shadow-sm" bodyStyle={{ padding: 0 }}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1020px] text-left">
-            <thead>
-              <tr className="bg-slate-50">
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  客服姓名
-                </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  角色
-                </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  所属小组
-                </th>
-                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider text-slate-500">
-                  状态
-                </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  处理订单
-                </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">
-                  创建时间
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-500">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAgents.map((agent) => (
-                <tr
-                  key={agent.id}
-                  className="border-t border-slate-100 transition-colors hover:bg-slate-50/70"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar size={32} src={agent.avatarUrl} />
-                      <div>
-                        <p className="text-sm font-semibold">{agent.name}</p>
-                        <p className="text-[10px] text-slate-500">ID: {agent.id}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Tag color={agent.role === "admin" ? "blue" : "default"}>
-                      {roleLabelMap[agent.role]}
-                    </Tag>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{agent.teamName}</td>
-                  <td className="px-6 py-4 text-center">
-                    <Tag color={statusTagColorMap[agent.status]}>
-                      {statusLabelMap[agent.status]}
-                    </Tag>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {agent.handledOrderCount.toLocaleString()}
-                      </p>
-                      <div className="mt-1.5 h-1.5 w-24 rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-blue-500"
-                          style={{ width: `${agent.completionRatio}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">{agent.createdAt}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        type="text"
-                        size="small"
-                        onClick={() => handleAgentAction(agent, "view")}
-                      >
-                        查看
-                      </Button>
-                      <Button
-                        type="text"
-                        size="small"
-                        onClick={() => handleAgentAction(agent, "edit")}
-                      >
-                        编辑
-                      </Button>
-                      <Button
-                        type="text"
-                        size="small"
-                        onClick={() => handleAgentAction(agent, "permission")}
-                      >
-                        权限
-                      </Button>
-                      <Button
-                        danger
-                        type="text"
-                        size="small"
-                        onClick={() => handleAgentAction(agent, "disable")}
-                      >
-                        禁用
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-6 py-4">
-          <Typography.Text className="!text-xs !text-slate-500">
-            显示 1 到 {filteredAgents.length} 项，共 24 项客服人员
-          </Typography.Text>
-          <div className="flex items-center gap-1">
-            <Button size="small" disabled>
-              上一页
-            </Button>
-            <Button size="small" type="primary">
-              1
-            </Button>
-            <Button size="small">2</Button>
-            <Button size="small">3</Button>
-            <Button size="small">下一页</Button>
-          </div>
-        </div>
+        <Table
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={rows}
+          pagination={{ pageSize: 10 }}
+        />
       </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
