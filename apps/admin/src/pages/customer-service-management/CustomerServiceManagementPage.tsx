@@ -1,4 +1,4 @@
-import { PlusOutlined, ReloadOutlined, TeamOutlined } from "@ant-design/icons";
+import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Avatar, Button, Card, Form, Input, Select, Table, Tag, Typography, message } from "antd";
 import { type ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useState } from "react";
@@ -17,13 +17,6 @@ type ServiceAgent = {
   createdAt: string;
   completionRatio: number;
   avatarUrl: string;
-};
-
-type ServiceStats = {
-  onlineCount: number;
-  totalCount: number;
-  avgResponseMinute: number;
-  satisfactionRate: number;
 };
 
 // TODO(backend): 接入客服管理列表接口（支持分页、搜索、状态筛选）
@@ -90,23 +83,10 @@ const mockAgents: ServiceAgent[] = [
   }
 ];
 
-// TODO(backend): 接入客服统计指标接口（在线数、响应时长、满意度）
-const mockStats: ServiceStats = {
-  onlineCount: 18,
-  totalCount: 24,
-  avgResponseMinute: 1.8,
-  satisfactionRate: 98.4
-};
-
 const statusLabelMap: Record<ServiceAgentStatus, string> = {
   online: "在线",
   offline: "离线",
   busy: "忙碌"
-};
-
-const roleLabelMap: Record<ServiceAgentRole, string> = {
-  admin: "管理员",
-  specialist: "客服专员"
 };
 
 const statusTagColorMap: Record<ServiceAgentStatus, string> = {
@@ -178,31 +158,22 @@ export const CustomerServiceManagementPage = () => {
 
   const columns: ColumnsType<ServiceAgent> = [
     {
-      title: "客服姓名",
+      title: "客服头像",
+      dataIndex: "avatarUrl",
+      key: "avatarUrl",
+      width: 100,
+      render: (_, agent) => <Avatar size={40} src={agent.avatarUrl} />
+    },
+    {
+      title: "客服昵称",
       dataIndex: "name",
       key: "name",
       render: (_, agent) => (
-        <div className="flex items-center gap-3">
-          <Avatar size={32} src={agent.avatarUrl} />
-          <div>
-            <p className="text-sm font-semibold">{agent.name}</p>
-            <p className="text-[10px] text-slate-500">ID: {agent.id}</p>
-          </div>
+        <div>
+          <p className="text-sm font-semibold">{agent.name}</p>
+          <p className="text-[10px] text-slate-500">ID: {agent.id}</p>
         </div>
       )
-    },
-    {
-      title: "角色",
-      dataIndex: "role",
-      key: "role",
-      render: (role: ServiceAgentRole) => (
-        <Tag color={role === "admin" ? "blue" : "default"}>{roleLabelMap[role]}</Tag>
-      )
-    },
-    {
-      title: "所属小组",
-      dataIndex: "teamName",
-      key: "teamName"
     },
     {
       title: "状态",
@@ -210,22 +181,6 @@ export const CustomerServiceManagementPage = () => {
       key: "status",
       render: (status: ServiceAgentStatus) => (
         <Tag color={statusTagColorMap[status]}>{statusLabelMap[status]}</Tag>
-      )
-    },
-    {
-      title: "处理订单",
-      dataIndex: "handledOrderCount",
-      key: "handledOrderCount",
-      render: (_, agent) => (
-        <div>
-          <p className="text-sm font-medium">{agent.handledOrderCount.toLocaleString()}</p>
-          <div className="mt-1.5 h-1.5 w-24 rounded-full bg-slate-100">
-            <div
-              className="h-full rounded-full bg-blue-500"
-              style={{ width: `${agent.completionRatio}%` }}
-            />
-          </div>
-        </div>
       )
     },
     {
@@ -288,7 +243,7 @@ export const CustomerServiceManagementPage = () => {
               allowClear
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
-              placeholder="请输入客服姓名、ID或小组"
+              placeholder="请输入客服昵称或 ID"
             />
           </Form.Item>
           <Form.Item className="mb-0 w-[220px]" label="客服状态">
@@ -327,56 +282,6 @@ export const CustomerServiceManagementPage = () => {
           pagination={{ pageSize: 10 }}
         />
       </Card>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <TeamOutlined />
-            </div>
-            <Tag color="success">+12%</Tag>
-          </div>
-          <Typography.Text className="!text-xs !font-bold !uppercase !tracking-wider !text-slate-500">
-            总在线客服
-          </Typography.Text>
-          <Typography.Title level={3} className="!mb-0 !mt-1">
-            {mockStats.onlineCount}
-            <span className="ml-1 text-xs font-normal text-slate-500">
-              / {mockStats.totalCount}
-            </span>
-          </Typography.Title>
-        </Card>
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-              <ReloadOutlined />
-            </div>
-            <Tag color="success">-4.2s</Tag>
-          </div>
-          <Typography.Text className="!text-xs !font-bold !uppercase !tracking-wider !text-slate-500">
-            平均响应时间
-          </Typography.Text>
-          <Typography.Title level={3} className="!mb-0 !mt-1">
-            {mockStats.avgResponseMinute}
-            <span className="ml-1 text-xs font-normal text-slate-500">min</span>
-          </Typography.Title>
-        </Card>
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-              <TeamOutlined />
-            </div>
-            <Tag color="success">+0.8%</Tag>
-          </div>
-          <Typography.Text className="!text-xs !font-bold !uppercase !tracking-wider !text-slate-500">
-            客户满意度
-          </Typography.Text>
-          <Typography.Title level={3} className="!mb-0 !mt-1">
-            {mockStats.satisfactionRate}
-            <span className="ml-1 text-xs font-normal text-slate-500">%</span>
-          </Typography.Title>
-        </Card>
-      </div>
     </div>
   );
 };

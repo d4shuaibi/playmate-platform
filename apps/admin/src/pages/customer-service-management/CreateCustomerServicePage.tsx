@@ -1,24 +1,11 @@
 import { ArrowLeftOutlined, CameraOutlined, QrcodeOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, Select, Typography, Upload, message } from "antd";
+import { Button, Card, Form, Input, Typography, Upload, message } from "antd";
 import { useNavigate } from "react-router-dom";
 
 type CreateServiceFormValues = {
   nickname: string;
   wechatId: string;
-  teamName: string;
-  role: "specialist" | "admin";
 };
-
-const teamOptions = [
-  { label: "核心服务组", value: "核心服务组" },
-  { label: "投诉处理组", value: "投诉处理组" },
-  { label: "大客户服务", value: "大客户服务" }
-];
-
-const roleOptions = [
-  { label: "客服专员", value: "specialist" },
-  { label: "管理员", value: "admin" }
-];
 
 export const CreateCustomerServicePage = () => {
   const [form] = Form.useForm<CreateServiceFormValues>();
@@ -32,7 +19,7 @@ export const CreateCustomerServicePage = () => {
     void (async () => {
       try {
         const values = await form.validateFields();
-        // TODO(backend): 调用新增客服接口，提交昵称/微信号/二维码/头像/小组/角色
+        // TODO(backend): 调用新增客服接口，提交昵称/微信号/头像/二维码
         // TODO(backend): 上传头像与微信二维码，拿到文件 URL 后一起提交创建接口
         message.success(`新增客服成功（Mock）：${values.nickname}`);
         void navigate("/customer-service-management");
@@ -76,22 +63,6 @@ export const CreateCustomerServicePage = () => {
                 rules={[{ required: true, message: "请输入微信账号" }]}
               >
                 <Input placeholder="请输入微信账号" />
-              </Form.Item>
-
-              <Form.Item
-                label="所属小组"
-                name="teamName"
-                rules={[{ required: true, message: "请选择所属小组" }]}
-              >
-                <Select placeholder="请选择所属小组" options={teamOptions} />
-              </Form.Item>
-
-              <Form.Item
-                label="初始角色"
-                name="role"
-                rules={[{ required: true, message: "请选择初始角色" }]}
-              >
-                <Select placeholder="请选择初始角色" options={roleOptions} />
               </Form.Item>
             </div>
 
