@@ -7,6 +7,8 @@ import { WechatPhoneService } from "./wechat-phone.service";
 /** Body.code 为 getPhoneNumber 回调中的动态令牌（与 wx.login 的 code 不同） */
 export type MiniLoginRequest = {
   code: string;
+  /** wx.login 的 code（用于换 openid/unionid），可选 */
+  wxLoginCode?: string;
 };
 
 type MiniLoginResponseData = {
@@ -190,10 +192,48 @@ export class AuthService {
 
     const appid = process.env.WECHAT_MINI_APPID?.trim();
     const secret = process.env.WECHAT_MINI_SECRET?.trim();
+    const wxLoginCode = body?.wxLoginCode?.trim();
 
     let phoneNumber: string;
+    let wechatOpenId: string | undefined;
+    let wechatUnionId: string | undefined;
+
+    /**
+     * 用 wx.login 的 code 换 openid/unionid（如未传 wxLoginCode，则跳过）。
+     * 说明：unionid 仅在满足条件时返回（如已绑定开放平台等）。
+     */
+    const resolveWechatSessionIfNeeded = async () => {
+      if (!wxLoginCode) return;
+      if (appid && secret) {
+        const url = new URL("https://api.weixin.qq.com/sns/jscode2session");
+        url.searchParams.set("appid", appid);
+        url.searchParams.set("secret", secret);
+        url.searchParams.set("js_code", wxLoginCode);
+        url.searchParams.set("grant_type", "authorization_code");
+        const res = await fetch(url);
+        const data = (await res.json()) as {
+          openid?: string;
+          unionid?: string;
+          errcode?: number;
+          errmsg?: string;
+        };
+        if (typeof data.errcode === "number" && data.errcode !== 0) {
+          this.logger.warn(`code2session err: ${data.errmsg ?? data.errcode}`);
+          return;
+        }
+        if (data.openid) wechatOpenId = data.openid;
+        if (data.unionid) wechatUnionId = data.unionid;
+        return;
+      }
+
+      if (process.env.NODE_ENV !== "production") {
+        // dev 环境无 appid/secret 时，合成一个稳定 openid 便于联调（不会写到生产）
+        wechatOpenId = `dev-openid-${createHash("sha256").update(wxLoginCode).digest("hex").slice(0, 16)}`;
+      }
+    };
 
     try {
+      await resolveWechatSessionIfNeeded();
       if (appid && secret) {
         const phone = await this.wechatPhone.getPhoneByCode(code);
         phoneNumber = phone.phoneNumber;
@@ -221,17 +261,64 @@ export class AuthService {
     }
 
     try {
-      const existing = await this.prisma.user.findFirst({
-        where: { phone: phoneNumber },
-        select: { id: true, role: true }
-      });
+      /**
+       * 用户识别策略：
+       * - 优先用 wechatOpenId 找到同一个微信用户（手机号可能变更）
+       * - 找不到再用 phone 兜底（历史数据可能只有手机号）
+       */
+      const existingByOpenId = wechatOpenId
+        ? await this.prisma.user.findFirst({
+            where: { wechatOpenId },
+            select: { id: true, role: true, phone: true, wechatOpenId: true, wechatUnionId: true }
+          })
+        : null;
 
-      const user =
-        existing ??
-        (await this.prisma.user.create({
-          data: { phone: phoneNumber },
-          select: { id: true, role: true }
-        }));
+      const existingByPhone = existingByOpenId
+        ? null
+        : await this.prisma.user.findFirst({
+            where: { phone: phoneNumber },
+            select: { id: true, role: true, phone: true, wechatOpenId: true, wechatUnionId: true }
+          });
+
+      const existing = existingByOpenId ?? existingByPhone;
+
+      if (existingByOpenId && existingByOpenId.phone && existingByOpenId.phone !== phoneNumber) {
+        const occupied = await this.prisma.user.findFirst({
+          where: { phone: phoneNumber },
+          select: { id: true }
+        });
+        if (occupied && occupied.id !== existingByOpenId.id) {
+          return {
+            code: 409,
+            message: "该手机号已绑定其他账号，请用该手机号绑定的微信登录",
+            data: null
+          };
+        }
+      }
+
+      const user = existing
+        ? await this.prisma.user.update({
+            where: { id: existing.id },
+            data: {
+              // 只在为空时补齐，避免覆盖历史绑定
+              wechatOpenId: existing.wechatOpenId ? undefined : wechatOpenId,
+              wechatUnionId: existing.wechatUnionId ? undefined : wechatUnionId,
+              // openid 命中时允许手机号随微信返回变更（不覆盖空字符串以外的无效值）
+              phone:
+                existingByOpenId && phoneNumber && existing.phone !== phoneNumber
+                  ? phoneNumber
+                  : undefined
+            },
+            select: { id: true, role: true }
+          })
+        : await this.prisma.user.create({
+            data: {
+              phone: phoneNumber,
+              wechatOpenId,
+              wechatUnionId
+            },
+            select: { id: true, role: true }
+          });
 
       const appRole = user.role === "WORKER" ? "worker" : "user";
       const issued = this.tokenService.issueTokens(user.id, appRole);
@@ -264,7 +351,8 @@ export class AuthService {
         "Using dev fallback (no DB). Start Postgres and run prisma migrate — see services/api/.env.example"
       );
 
-      const stableId = createHash("sha256").update(phoneNumber).digest("hex").slice(0, 24);
+      const stableSeed = wechatOpenId || phoneNumber;
+      const stableId = createHash("sha256").update(stableSeed).digest("hex").slice(0, 24);
       const issued = this.tokenService.issueTokens(stableId, "user");
       return {
         code: 0,

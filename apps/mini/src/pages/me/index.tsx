@@ -7,6 +7,7 @@ import { fetchWorkerJoinProgress, logoutMiniUser } from "../../services";
 // import { getRole, getWorkerPermission, setRole } from "../../utils/role";
 import { getRole, setRole } from "../../utils/role";
 import { getToken } from "../../utils/session";
+import { LoginModal } from "../../components/login-modal/LoginModal";
 
 type OrderStateItem = {
   key: string;
@@ -63,6 +64,7 @@ const mockMenus: MenuItem[] = [
 const MePage = () => {
   const [role, setCurrentRole] = useState(() => getRole());
   const [loggedIn, setLoggedIn] = useState(() => Boolean(getToken()));
+  const [loginOpen, setLoginOpen] = useState(false);
 
   useDidShow(() => {
     const nextLoggedIn = Boolean(getToken());
@@ -74,6 +76,7 @@ const MePage = () => {
   const handleLogout = () => {
     logoutMiniUser();
     setLoggedIn(false);
+    setCurrentRole("user");
     void Taro.showToast({ title: "已退出登录", icon: "none" });
   };
 
@@ -84,16 +87,21 @@ const MePage = () => {
   };
 
   const handleSwitchToWorker = () => {
-    // if (!getWorkerPermission()) {
-    //   void Taro.showToast({ title: "你暂无打手端权限", icon: "none" });
-    //   return;
-    // }
+    if (!getToken()) {
+      setLoginOpen(true);
+      return;
+    }
+    // 预留：后续若要按服务端权限控制，这里改为 getWorkerPermission() 再允许切换
     setRole("worker");
     setCurrentRole("worker");
     void Taro.redirectTo({ url: "/pages/home-worker/index" });
   };
 
   const handleFeatureClick = (label: string) => {
+    if (!loggedIn) {
+      setLoginOpen(true);
+      return;
+    }
     void Taro.showToast({ title: `${label}功能开发中`, icon: "none" });
   };
 
@@ -144,17 +152,29 @@ const MePage = () => {
             </View>
           </View>
           <View className="mePage__profileMain">
-            <Text className="mePage__nickname">{mockProfile.nickname}</Text>
-            <View className="mePage__profileMetaRow">
-              <Text className="mePage__profileMeta">{mockProfile.userIdLabel}</Text>
-              <Text className="mePage__profileMeta mePage__profileMeta--level">
-                {mockProfile.levelLabel}
-              </Text>
+            <Text className="mePage__nickname">{loggedIn ? mockProfile.nickname : "未登录"}</Text>
+            {loggedIn ? (
+              <View className="mePage__profileMetaRow">
+                <Text className="mePage__profileMeta">{mockProfile.userIdLabel}</Text>
+                <Text className="mePage__profileMeta mePage__profileMeta--level">
+                  {mockProfile.levelLabel}
+                </Text>
+              </View>
+            ) : (
+              <View
+                className="mePage__balanceAction"
+                onClick={() => setLoginOpen(true)}
+                aria-label="登录或注册"
+              >
+                <Text className="mePage__balanceActionText">登录/注册</Text>
+              </View>
+            )}
+          </View>
+          {loggedIn ? (
+            <View className="mePage__assetTag">
+              <Text className="mePage__assetTagText">{mockProfile.assetTag}</Text>
             </View>
-          </View>
-          <View className="mePage__assetTag">
-            <Text className="mePage__assetTagText">{mockProfile.assetTag}</Text>
-          </View>
+          ) : null}
         </View>
 
         <View className="mePage__switchCard">
@@ -175,7 +195,7 @@ const MePage = () => {
         <View className="mePage__balanceCard">
           <View className="mePage__balanceLeft">
             <Text className="mePage__balanceLabel">可用余额</Text>
-            <Text className="mePage__balanceAmount">{mockBalance.amountText}</Text>
+            <Text className="mePage__balanceAmount">{loggedIn ? mockBalance.amountText : "—"}</Text>
           </View>
           <View
             className="mePage__balanceAction"
@@ -244,6 +264,15 @@ const MePage = () => {
       </ScrollView>
 
       <BottomBar role={role} activeKey="me" />
+
+      <LoginModal
+        visible={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onLoginSuccess={() => {
+          setLoggedIn(true);
+          setCurrentRole(getRole());
+        }}
+      />
     </View>
   );
 };

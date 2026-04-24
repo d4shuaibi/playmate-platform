@@ -21,14 +21,14 @@ type MiniLoginResponse = {
  * 与 wx.login 的 code 不同。服务端换手机号后按手机号登录；**新手机号则新建用户**。
  * @see https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/getPhoneNumber.html
  */
-export const loginWithPhoneCode = async (phoneCode: string) => {
+export const loginWithPhoneCode = async (phoneCode: string, wxLoginCode?: string) => {
   if (!phoneCode) {
     throw new Error("未获取到手机号授权");
   }
 
   const res = await request<MiniLoginResponse>(apiPaths.miniLogin, {
     method: "POST",
-    body: { code: phoneCode },
+    body: { code: phoneCode, wxLoginCode },
     skipAuth: true
   });
 

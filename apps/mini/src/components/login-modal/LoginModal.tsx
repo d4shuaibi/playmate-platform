@@ -54,7 +54,14 @@ export const LoginModal = (props: LoginModalProps) => {
 
     setIsSubmitting(true);
     try {
-      await loginWithPhoneCode(phoneCode);
+      const wxLoginCode = await new Promise<string>((resolve) => {
+        Taro.login({
+          success: (res) => resolve(String(res.code ?? "")),
+          fail: () => resolve("")
+        });
+      });
+
+      await loginWithPhoneCode(phoneCode, wxLoginCode || undefined);
       void Taro.showToast({ title: "登录成功", icon: "success" });
       onLoginSuccess?.();
       onClose();
