@@ -77,6 +77,17 @@ export class AuthTokenService {
     };
   }
 
+  verifyAccessToken(token: string): AccessTokenPayload {
+    const payload = jwt.verify(token, this.tokenSecret) as AccessTokenPayload;
+    if (payload.typ !== "access" || typeof payload.sub !== "string") {
+      throw new Error("Invalid access token");
+    }
+    if (payload.role !== "user" && payload.role !== "worker") {
+      throw new Error("Invalid access token role");
+    }
+    return payload;
+  }
+
   verifyRefreshToken(token: string): RefreshTokenPayload {
     const payload = jwt.verify(token, this.tokenSecret) as RefreshTokenPayload;
     if (payload.typ !== "refresh" || typeof payload.sub !== "string") {

@@ -59,18 +59,28 @@ export const AppLayout = () => {
       key: "products",
       label: "商品管理",
       icon: <AppstoreOutlined />,
+      path: "/product-management",
       permission: "product.read"
+    },
+    {
+      key: "productCategoryManagement",
+      label: "商品大类管理",
+      icon: <AppstoreOutlined />,
+      path: "/product-category-management",
+      permission: "product.write"
     },
     {
       key: "orders",
       label: "订单管理",
       icon: <ShoppingCartOutlined />,
+      path: "/order-management",
       permission: "order.read"
     },
     {
       key: "workers",
       label: "打手管理",
       icon: <TeamOutlined />,
+      path: "/worker-management",
       permission: "worker.read"
     },
     {

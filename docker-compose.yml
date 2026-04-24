@@ -26,6 +26,7 @@ services:
       - ./services/api/.env
     environment:
       NODE_ENV: production
+      SEED_DEMO: "true"
       PORT: "3000"
       DATABASE_URL: postgresql://playmate:playmate@postgres:5432/playmate?schema=public
       REDIS_URL: redis://redis:6379

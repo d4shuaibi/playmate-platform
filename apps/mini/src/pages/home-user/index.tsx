@@ -1,18 +1,16 @@
 import { View, Text, Swiper, SwiperItem, ScrollView } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import { Notice, Search, Star, HeartFill } from "@nutui/icons-react-taro";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import { AppIconFont } from "../../components/icon-font/IconFont";
 import { LoginModal } from "../../components/login-modal/LoginModal";
 import { getRole } from "../../utils/role";
 import { getToken } from "../../utils/session";
+import { fetchMiniProductCategories, fetchMiniProducts } from "../../services/products";
 
-type GameTab = {
-  key: string;
-  label: string;
-};
+type ServiceTab = { key: string; label: string };
 
 type BannerItem = {
   tag: string;
@@ -24,8 +22,8 @@ type BannerItem = {
 
 type ServiceItem = {
   id: string;
-  gameKey: string;
-  gameName: string;
+  categoryKey: string;
+  categoryName: string;
   title: string;
   subtitle: string;
   price: string;
@@ -64,92 +62,84 @@ const NOTICE_LIST: string[] = [
   "温馨提醒：下单前请确认服务时段和需求"
 ];
 
-const GAME_TABS: GameTab[] = [
-  { key: "all", label: "全部游戏" },
-  { key: "wzry", label: "王者荣耀" },
-  { key: "lol", label: "英雄联盟" },
-  { key: "ys", label: "原神" },
-  { key: "peace", label: "和平精英" },
-  { key: "jcc", label: "金铲铲之战" }
-];
-
-const SERVICES: ServiceItem[] = [
-  {
-    id: "wzry-rank",
-    gameKey: "wzry",
-    gameName: "王者荣耀",
-    title: "王者荣耀: 排位上分",
-    subtitle: "专业多单保障团队",
-    price: "¥168.00",
-    coverClassName: "userHome__serviceCover--a",
-    chip: "热门",
-    chipClassName: "userHome__coverChip--hot"
-  },
-  {
-    id: "lol-duo",
-    gameKey: "lol",
-    gameName: "英雄联盟",
-    title: "LOL: 双排指导",
-    subtitle: "大师级教练带你学",
-    price: "¥315.00",
-    coverClassName: "userHome__serviceCover--b",
-    chip: "新品",
-    chipClassName: "userHome__coverChip--new"
-  },
-  {
-    id: "jcc-fast",
-    gameKey: "jcc",
-    gameName: "金铲铲之战",
-    title: "金铲铲: 快速升级",
-    subtitle: "高效冲榜冲段专家",
-    price: "¥98.00",
-    coverClassName: "userHome__serviceCover--c",
-    chip: "金铲铲",
-    chipClassName: "userHome__coverChip--brand"
-  },
-  {
-    id: "peace-rank",
-    gameKey: "peace",
-    gameName: "和平精英",
-    title: "和平精英: 王者上分",
-    subtitle: "冠军枪法带你冲榜",
-    price: "¥128.00",
-    coverClassName: "userHome__serviceCover--d",
-    chip: "和平精英",
-    chipClassName: "userHome__coverChip--brand"
-  },
-  {
-    id: "ys-open",
-    gameKey: "ys",
-    gameName: "原神",
-    title: "原神: 深渊满星",
-    subtitle: "高练度配队稳定通关",
-    price: "¥228.00",
-    coverClassName: "userHome__serviceCover--b",
-    chip: "原神",
-    chipClassName: "userHome__coverChip--brand"
-  }
-];
+const DEFAULT_TABS: ServiceTab[] = [{ key: "all", label: "全部类型" }];
 
 const UserHomePage = () => {
   const role = getRole();
-  const [activeGameKey, setActiveGameKey] = useState<string>("all");
+  const [tabs, setTabs] = useState<ServiceTab[]>(DEFAULT_TABS);
+  const [activeTypeKey, setActiveTypeKey] = useState<string>("all");
+  const [services, setServices] = useState<ServiceItem[]>([]);
   const [loginOpen, setLoginOpen] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const categories = await fetchMiniProductCategories();
+        setTabs([
+          { key: "all", label: "全部类型" },
+          ...categories.map((c) => ({ key: c.id, label: c.name }))
+        ]);
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "加载类型失败",
+          icon: "none"
+        });
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const items = await fetchMiniProducts({
+          categoryId: activeTypeKey === "all" ? undefined : activeTypeKey
+        });
+        setServices(
+          items.map((item, index) => {
+            const coverClassName =
+              index % 4 === 0
+                ? "userHome__serviceCover--a"
+                : index % 4 === 1
+                  ? "userHome__serviceCover--b"
+                  : index % 4 === 2
+                    ? "userHome__serviceCover--c"
+                    : "userHome__serviceCover--d";
+            return {
+              id: item.id,
+              categoryKey: item.categoryId,
+              categoryName: item.categoryName,
+              title: item.name,
+              subtitle: item.descriptionLines?.[0] ?? item.stockText ?? "",
+              price: `¥${item.price.toFixed(2)}`,
+              coverClassName,
+              chip: item.categoryName,
+              chipClassName: "userHome__coverChip--brand"
+            };
+          })
+        );
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "加载服务失败",
+          icon: "none"
+        });
+      }
+    })();
+  }, [activeTypeKey]);
 
   const visibleServices = useMemo(
     () =>
-      activeGameKey === "all"
-        ? SERVICES
-        : SERVICES.filter((service) => service.gameKey === activeGameKey),
-    [activeGameKey]
+      activeTypeKey === "all"
+        ? services
+        : services.filter((service) => service.categoryKey === activeTypeKey),
+    [activeTypeKey, services]
   );
 
   const handleGoWorkerHome = () => {
     void Taro.navigateTo({ url: "/pages/home-worker/index" });
   };
 
-  const handleSelectGameTab = (gameKey: string) => {
-    setActiveGameKey(gameKey);
+  const handleSelectTypeTab = (typeKey: string) => {
+    setActiveTypeKey(typeKey);
   };
 
   const handleServiceCardClick = (serviceId: string) => {
@@ -257,13 +247,13 @@ const UserHomePage = () => {
 
         <ScrollView className="userHome__tabsScroll" scrollX enhanced showScrollbar={false}>
           <View className="userHome__tabs">
-            {GAME_TABS.map((tab) => {
-              const isActive = tab.key === activeGameKey;
+            {tabs.map((tab) => {
+              const isActive = tab.key === activeTypeKey;
               return (
                 <View
                   key={tab.key}
                   className={`userHome__tab ${isActive ? "userHome__tab--active" : ""}`}
-                  onClick={() => handleSelectGameTab(tab.key)}
+                  onClick={() => handleSelectTypeTab(tab.key)}
                 >
                   <Text
                     className={`userHome__tabText ${isActive ? "userHome__tabText--active" : ""}`}
@@ -282,7 +272,7 @@ const UserHomePage = () => {
               key={service.id}
               className="userHome__serviceCard"
               onClick={() => handleServiceCardClick(service.id)}
-              aria-label={`选择${service.gameName}服务`}
+              aria-label={`选择${service.categoryName}服务`}
             >
               <View className={`userHome__serviceCover ${service.coverClassName}`}>
                 <Text className={`userHome__coverChip ${service.chipClassName}`}>

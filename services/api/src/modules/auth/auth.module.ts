@@ -8,6 +8,7 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { AdminAuthService } from "./admin-auth.service";
 import { AdminAuthGuard } from "./admin-auth.guard";
 import { AdminPermissionGuard } from "./admin-permission.guard";
+import { MiniAuthGuard } from "./mini-auth.guard";
 
 @Module({
   controllers: [AuthController],
@@ -17,10 +18,18 @@ import { AdminPermissionGuard } from "./admin-permission.guard";
     AdminAuthService,
     AdminAuthGuard,
     AdminPermissionGuard,
+    MiniAuthGuard,
     WechatAccessTokenService,
     WechatPhoneService,
     PrismaService
   ],
-  exports: [AuthService, AdminAuthService, AdminAuthGuard, AdminPermissionGuard]
+  exports: [
+    AuthService,
+    AuthTokenService,
+    AdminAuthService,
+    AdminAuthGuard,
+    AdminPermissionGuard,
+    MiniAuthGuard
+  ]
 })
 export class AuthModule {}

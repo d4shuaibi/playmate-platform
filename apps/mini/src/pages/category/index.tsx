@@ -1,21 +1,12 @@
 import { View, Text, ScrollView, Input } from "@tarojs/components";
 import Taro from "@tarojs/taro";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import { getRole } from "../../utils/role";
+import { fetchMiniProductCategories, fetchMiniProducts } from "../../services/products";
 
-type ServiceCategory = {
-  key: string;
-  label: string;
-  subtitle: string;
-};
-
-type ServiceTag = {
-  label: string;
-  tone: "primary" | "secondary" | "neutral";
-};
-
+type ServiceCategory = { key: string; label: string; subtitle: string };
 type ServiceCard = {
   id: string;
   categoryKey: string;
@@ -23,79 +14,73 @@ type ServiceCard = {
   desc: string;
   priceText: string;
   soldText: string;
-  tag?: ServiceTag;
 };
-
-const mockCategories: ServiceCategory[] = [
-  // TODO(backend): 后端返回分类列表（key/label/icon/排序）
-  { key: "extract", label: "带出类", subtitle: "精品带出服务" },
-  { key: "guarantee", label: "保底类", subtitle: "高价值保底方案" },
-  { key: "rank", label: "上分类", subtitle: "上分/上段服务" },
-  { key: "escort", label: "护航类", subtitle: "全程陪跑护航" },
-  { key: "custom", label: "定制类", subtitle: "按需定制方案" }
-];
-
-const mockServices: ServiceCard[] = [
-  // TODO(backend): 后端返回服务卡片列表（标题/描述/价格/销量/标签/库存等）
-  {
-    id: "svc-1",
-    categoryKey: "extract",
-    title: "红卡稳定带出服务",
-    desc: "针对高级战区红卡提取，全程专业护航，保证物资安全撤离。",
-    priceText: "¥299.00",
-    soldText: "已售 1.2k+",
-    tag: { label: "成功率 98%", tone: "secondary" }
-  },
-  {
-    id: "svc-2",
-    categoryKey: "extract",
-    title: "全地图通用带出",
-    desc: "不限地图，不限物资等级，全天候 24 小时随时发车。",
-    priceText: "¥158.00",
-    soldText: "已售 856",
-    tag: { label: "极速提取", tone: "primary" }
-  },
-  {
-    id: "svc-3",
-    categoryKey: "extract",
-    title: "VIP 专享：顶级组合带出",
-    desc: "包含实验室权限卡、秘密文件及顶级防具套，由顶尖团队带队。",
-    priceText: "¥1,299",
-    soldText: "VIP 专享",
-    tag: { label: "100% 成功保底", tone: "secondary" }
-  },
-  {
-    id: "svc-4",
-    categoryKey: "extract",
-    title: "快速撤离：黄金时段",
-    desc: "晚间黄金时段极速响应，平均等待时间小于 3 分钟。",
-    priceText: "¥88.00",
-    soldText: "已售 431",
-    tag: { label: "中级套餐", tone: "neutral" }
-  }
-];
 
 const CategoryPage = () => {
   const role = getRole();
-  const [activeCategoryKey, setActiveCategoryKey] = useState<string>(mockCategories[0]?.key ?? "");
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
+  const [services, setServices] = useState<ServiceCard[]>([]);
+  const [activeCategoryKey, setActiveCategoryKey] = useState<string>("");
   const [keyword, setKeyword] = useState("");
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        const cats = await fetchMiniProductCategories();
+        const nextCats: ServiceCategory[] = cats.map((item) => ({
+          key: item.id,
+          label: item.name,
+          subtitle: item.name
+        }));
+        setCategories(nextCats);
+        if (nextCats.length > 0) {
+          setActiveCategoryKey(nextCats[0].key);
+        }
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "加载分类失败",
+          icon: "none"
+        });
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const items = await fetchMiniProducts({
+          keyword,
+          categoryId: activeCategoryKey || undefined
+        });
+        setServices(
+          items.map((item) => ({
+            id: item.id,
+            categoryKey: item.categoryId,
+            title: item.name,
+            desc: item.descriptionLines?.[0] ?? "",
+            priceText: `¥${item.price.toFixed(2)}`,
+            soldText: ""
+          }))
+        );
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "加载商品失败",
+          icon: "none"
+        });
+      }
+    })();
+  }, [activeCategoryKey, keyword]);
+
   const activeCategory = useMemo(
-    () => mockCategories.find((c) => c.key === activeCategoryKey) ?? mockCategories[0],
-    [activeCategoryKey]
+    () => categories.find((c) => c.key === activeCategoryKey) ?? categories[0],
+    [activeCategoryKey, categories]
   );
 
   const visibleServices = useMemo(() => {
-    const byCategory = mockServices.filter((s) => s.categoryKey === activeCategoryKey);
-    const trimmed = keyword.trim();
-    if (!trimmed) return byCategory;
-    return byCategory.filter(
-      (s) => s.title.includes(trimmed) || s.desc.includes(trimmed) || s.soldText.includes(trimmed)
-    );
-  }, [activeCategoryKey, keyword]);
+    return services.filter((s) => s.categoryKey === activeCategoryKey);
+  }, [activeCategoryKey, services]);
 
   const handleBuy = (service: ServiceCard) => {
-    // TODO(backend): 改为根据 service.id 拉取真实商品详情数据
     void Taro.navigateTo({ url: `/pages/goods-detail/index?id=${encodeURIComponent(service.id)}` });
   };
 
@@ -125,7 +110,7 @@ const CategoryPage = () => {
       <View className="categoryPage__body">
         <View className="categoryPage__side">
           <View className="categoryPage__sideScroll">
-            {mockCategories.map((c) => {
+            {categories.map((c) => {
               const isActive = c.key === activeCategoryKey;
               return (
                 <View
@@ -151,17 +136,7 @@ const CategoryPage = () => {
             {visibleServices.map((service) => (
               <View key={service.id} className="categoryPage__card">
                 <View className="categoryPage__cardTop">
-                  {service.tag ? (
-                    <View
-                      className={`categoryPage__tag categoryPage__tag--${service.tag.tone}`}
-                      aria-label={service.tag.label}
-                    >
-                      <View className="categoryPage__tagDot" />
-                      <Text className="categoryPage__tagText">{service.tag.label}</Text>
-                    </View>
-                  ) : (
-                    <View />
-                  )}
+                  <View />
                   <Text className="categoryPage__sold">{service.soldText}</Text>
                 </View>
 

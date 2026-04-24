@@ -3,6 +3,8 @@ import Taro from "@tarojs/taro";
 import { useMemo, useState } from "react";
 import "./index.scss";
 import { getRole } from "../../utils/role";
+import { applyWorkerJoin } from "../../services";
+import { getToken } from "../../utils/session";
 
 type AssessmentOption = {
   value: string;
@@ -27,6 +29,7 @@ const mockAssessmentOptions: AssessmentOption[] = [
 
 const WorkerJoinPage = () => {
   const role = getRole();
+  const [submitting, setSubmitting] = useState(false);
   const [draft, setDraft] = useState<JoinDraft>({
     realName: "",
     age: "",
@@ -68,16 +71,39 @@ const WorkerJoinPage = () => {
       void Taro.showToast({ title: "请完善入驻资料", icon: "none" });
       return;
     }
-    // TODO(backend): 提交打手入驻申请接口（实名信息、考核类型、手机号、身份证等）
-    // TODO(backend): 返回审核状态（待审核/已通过/已拒绝）及提示文案
-    // TODO(backend): 若通过，后端应下发 workerPermission/role，并引导切换到打手端
-    void Taro.showToast({ title: "已提交申请（Mock）", icon: "none" });
-    // TODO(backend): 接入提交接口后，用返回的 refNo/status 跳转到进度页
-    setTimeout(() => {
-      void Taro.navigateTo({
-        url: "/pages/worker-join-progress/index?status=reviewing&ref=2026-X-0892"
-      });
-    }, 350);
+    if (!getToken()) {
+      void Taro.showToast({ title: "请先登录后再提交申请", icon: "none" });
+      return;
+    }
+    if (submitting) return;
+
+    setSubmitting(true);
+    void (async () => {
+      try {
+        const result = await applyWorkerJoin({
+          realName: draft.realName.trim(),
+          age: Number(draft.age),
+          phone: draft.phone.trim(),
+          idNo: draft.idNo.trim(),
+          assessmentType: draft.assessmentType as unknown as
+            | "moba"
+            | "fps"
+            | "strategy"
+            | "all-around"
+        });
+        void Taro.showToast({ title: "已提交申请", icon: "none" });
+        void Taro.navigateTo({
+          url: `/pages/worker-join-progress/index?status=${encodeURIComponent(result.status)}&ref=${encodeURIComponent(result.refNo)}`
+        });
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "提交失败，请稍后重试",
+          icon: "none"
+        });
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   };
 
   return (
@@ -194,11 +220,11 @@ const WorkerJoinPage = () => {
 
       <View className="workerJoin__footer">
         <View
-          className={`workerJoin__submitBtn ${canSubmit ? "workerJoin__submitBtn--active" : ""}`}
+          className={`workerJoin__submitBtn ${canSubmit && !submitting ? "workerJoin__submitBtn--active" : ""}`}
           onClick={handleSubmit}
           aria-label="提交打手入驻申请"
         >
-          <Text className="workerJoin__submitBtnText">提交申请</Text>
+          <Text className="workerJoin__submitBtnText">{submitting ? "提交中..." : "提交申请"}</Text>
         </View>
       </View>
     </View>

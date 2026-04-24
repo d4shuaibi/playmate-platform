@@ -9,6 +9,14 @@ import { CustomerServiceManagementPage } from "../pages/customer-service-managem
 import { CreateCustomerServicePage } from "../pages/customer-service-management/CreateCustomerServicePage";
 import { EditCustomerServicePage } from "../pages/customer-service-management/EditCustomerServicePage";
 import { AdminManagementPage } from "../pages/admin-management/AdminManagementPage";
+import { ProductCategoryManagementPage } from "../pages/product-category-management/ProductCategoryManagementPage";
+import { CreateProductCategoryPage } from "../pages/product-category-management/CreateProductCategoryPage";
+import { ProductManagementPage } from "../pages/product-management/ProductManagementPage";
+import { CreateProductPage } from "../pages/product-management/CreateProductPage";
+import { EditProductPage } from "../pages/product-management/EditProductPage";
+import { OrderManagementPage } from "../pages/order-management/OrderManagementPage";
+import { OrderDetailPage } from "../pages/order-management/OrderDetailPage";
+import { WorkerManagementPage } from "../pages/worker-management/WorkerManagementPage";
 import { getAdminAuthSession, getAdminDefaultPath } from "../services/auth/session";
 
 const NavigateToDefaultPage = () => {
@@ -71,6 +79,70 @@ export const AppRouter = () => {
                   <AdminManagementPage />
                 </RequireAdminPermission>
               </RequireAdminRole>
+            }
+          />
+          <Route
+            path="/product-category-management"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <ProductCategoryManagementPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/product-category-management/create"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <CreateProductCategoryPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/product-management"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <ProductManagementPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/product-management/create"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <CreateProductPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/product-management/edit/:id"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <EditProductPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/order-management"
+            element={
+              <RequireAdminPermission permission="order.read">
+                <OrderManagementPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/order-management/detail/:id"
+            element={
+              <RequireAdminPermission permission="order.read">
+                <OrderDetailPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/worker-management"
+            element={
+              <RequireAdminPermission permission="worker.read">
+                <WorkerManagementPage />
+              </RequireAdminPermission>
             }
           />
         </Route>

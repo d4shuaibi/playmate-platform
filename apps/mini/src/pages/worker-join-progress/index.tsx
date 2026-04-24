@@ -1,7 +1,9 @@
 import { View, Text, ScrollView } from "@tarojs/components";
-import Taro, { useRouter } from "@tarojs/taro";
-import { useMemo } from "react";
+import Taro, { useDidShow, useRouter } from "@tarojs/taro";
+import { useMemo, useState } from "react";
 import "./index.scss";
+import { fetchWorkerJoinProgress } from "../../services";
+import { getToken } from "../../utils/session";
 
 type JoinProgressStatus = "submitted" | "reviewing" | "approved" | "rejected";
 
@@ -15,23 +17,26 @@ type JoinProgressStep = {
 };
 
 type JoinProgressDetail = {
-  // TODO(backend): 后端返回申请单 ID/编号
   refNo: string;
-  // TODO(backend): 后端返回当前审核状态（submitted/reviewing/approved/rejected）
   status: JoinProgressStatus;
-  // TODO(backend): 后端返回页面文案（例如审核时长/原因/下一步引导）
   heroTitle: string;
   heroDesc: string;
   steps: JoinProgressStep[];
+  rejectReason?: string;
 };
 
-const buildMockDetail = (status: JoinProgressStatus, refNo: string): JoinProgressDetail => {
+const buildDetail = (
+  status: JoinProgressStatus,
+  refNo: string,
+  rejectReason?: string
+): JoinProgressDetail => {
   const base: JoinProgressDetail = {
     refNo,
     status,
     heroTitle: "入驻进度",
     heroDesc: "审核由网页端处理中，请耐心等待",
-    steps: []
+    steps: [],
+    rejectReason
   };
 
   const stepSubmitted: JoinProgressStep = {
@@ -60,7 +65,9 @@ const buildMockDetail = (status: JoinProgressStatus, refNo: string): JoinProgres
       status === "approved"
         ? "恭喜通过审核，你已获得打手端权限。"
         : status === "rejected"
-          ? "很遗憾未通过审核，请核对资料后重新提交。"
+          ? rejectReason
+            ? `很遗憾未通过审核：${rejectReason}`
+            : "很遗憾未通过审核，请核对资料后重新提交。"
           : undefined
   };
 
@@ -80,10 +87,38 @@ const buildMockDetail = (status: JoinProgressStatus, refNo: string): JoinProgres
 
 const WorkerJoinProgressPage = () => {
   const router = useRouter();
-  const status = (router.params.status as JoinProgressStatus | undefined) ?? "reviewing";
-  const refNo = router.params.ref ?? "2026-X-0892";
+  const statusFromRoute = (router.params.status as JoinProgressStatus | undefined) ?? "reviewing";
+  const refNoFromRoute = String(router.params.ref ?? "");
+  const [runtimeStatus, setRuntimeStatus] = useState<JoinProgressStatus>(statusFromRoute);
+  const [refNo, setRefNo] = useState<string>(refNoFromRoute);
+  const [rejectReason, setRejectReason] = useState<string | undefined>(undefined);
 
-  const detail = useMemo(() => buildMockDetail(status, refNo), [status, refNo]);
+  const detail = useMemo(
+    () => buildDetail(runtimeStatus, refNo || "—", rejectReason),
+    [runtimeStatus, refNo, rejectReason]
+  );
+
+  const handleLoad = () => {
+    if (!getToken()) return;
+    void (async () => {
+      try {
+        const data = await fetchWorkerJoinProgress();
+        if (!data) return;
+        setRuntimeStatus(data.status);
+        setRefNo(data.refNo);
+        setRejectReason(data.rejectReason);
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "加载进度失败",
+          icon: "none"
+        });
+      }
+    })();
+  };
+
+  useDidShow(() => {
+    handleLoad();
+  });
 
   const handleGoBack = () => {
     const pages = Taro.getCurrentPages();
@@ -96,16 +131,14 @@ const WorkerJoinProgressPage = () => {
 
   const handlePrimaryAction = () => {
     if (detail.status === "approved") {
-      // TODO(backend): 以服务端为准下发权限/角色；这里仅做 mock 引导
-      void Taro.showToast({ title: "请在“我的”切换到打手端（Mock）", icon: "none" });
+      void Taro.showToast({ title: "审核已通过，请在“我的”切换到打手端", icon: "none" });
       return;
     }
     if (detail.status === "rejected") {
-      // TODO(backend): 支持重新编辑已提交资料（预填），或创建新的申请单
       void Taro.redirectTo({ url: "/pages/worker-join/index" });
       return;
     }
-    void Taro.showToast({ title: "审核处理中（Mock）", icon: "none" });
+    void Taro.showToast({ title: "审核处理中，请耐心等待", icon: "none" });
   };
 
   const primaryText =
@@ -134,7 +167,11 @@ const WorkerJoinProgressPage = () => {
       </View>
 
       <ScrollView className="workerJoinProgress__scroll" scrollY enhanced showScrollbar={false}>
-        <View className="workerJoinProgress__heroCard">
+        <View
+          className="workerJoinProgress__heroCard"
+          onClick={handleLoad}
+          aria-label="刷新审核进度"
+        >
           <View className="workerJoinProgress__heroIconGhost">
             <Text className="workerJoinProgress__heroIconText">⎈</Text>
           </View>

@@ -3,7 +3,7 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
-import { logoutMiniUser } from "../../services";
+import { fetchWorkerJoinProgress, logoutMiniUser } from "../../services";
 // import { getRole, getWorkerPermission, setRole } from "../../utils/role";
 import { getRole, setRole } from "../../utils/role";
 import { getToken } from "../../utils/session";
@@ -103,8 +103,27 @@ const MePage = () => {
   };
 
   const handleOpenWorkerJoin = () => {
-    // TODO(backend): 后续根据后端返回的入驻状态（未申请/审核中/已通过/已拒绝）决定跳转到不同页面
-    void Taro.navigateTo({ url: "/pages/worker-join/index" });
+    if (!getToken()) {
+      void Taro.showToast({ title: "请先登录", icon: "none" });
+      return;
+    }
+    void (async () => {
+      try {
+        const progress = await fetchWorkerJoinProgress();
+        if (!progress) {
+          void Taro.navigateTo({ url: "/pages/worker-join/index" });
+          return;
+        }
+        void Taro.navigateTo({
+          url: `/pages/worker-join-progress/index?status=${encodeURIComponent(progress.status)}&ref=${encodeURIComponent(progress.refNo)}`
+        });
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "打开入驻失败",
+          icon: "none"
+        });
+      }
+    })();
   };
 
   const handleMenuClick = (menu: MenuItem) => {

@@ -1,58 +1,53 @@
 import { View, Text, ScrollView, Swiper, SwiperItem, Image } from "@tarojs/components";
 import Taro from "@tarojs/taro";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./index.scss";
-
-type NoticeItem = {
-  id: string;
-  level: "warn" | "error" | "info";
-  text: string;
-};
-
-type GoodsDetailData = {
-  heroImages: string[];
-  priceText: string;
-  originPriceText: string;
-  stockText: string;
-  title: string;
-  titleAccent: string;
-  badges: string[];
-  descriptionLines: string[];
-  notices: NoticeItem[];
-};
-
-// TODO(backend): 接入商品详情接口（轮播图、价格、标题、标签、说明、福利、下单须知）
-const mockGoodsDetail: GoodsDetailData = {
-  heroImages: [
-    "https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1542751110-97427bbecf20?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80"
-  ],
-  priceText: "¥69.90",
-  originPriceText: "¥128.00",
-  stockText: "LIMITED STOCK",
-  title: "绝密保底400-1000万！",
-  titleAccent: "赠送转盘",
-  badges: ["极速接单", "极速响应", "服务至上", "官方严选"],
-  descriptionLines: [
-    "必须打绝密并且保底400-1000万！（地图由打手选择）",
-    "可单护可双护根据打手情况来。",
-    "专业打手，稳定产出，极速回款。"
-  ],
-  notices: [
-    {
-      id: "notice-1",
-      level: "error",
-      text: "未成年禁止下单。本店严格执行国家未成年人防沉迷相关规定。"
-    },
-    { id: "notice-2", level: "error", text: "拒绝卡保底行为。一经发现，立即终止服务且不予退款。" },
-    { id: "notice-3", level: "info", text: "服务过程中请勿顶号，否则造成的损失由买家自行承担。" }
-  ]
-};
+import { fetchMiniProductDetail } from "../../services/products";
 
 const GoodsDetailPage = () => {
+  const router = useMemo(() => Taro.getCurrentInstance().router, []);
+  const productId = String(router?.params?.id ?? "");
   const [currentSwiperIndex, setCurrentSwiperIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [detail, setDetail] = useState<{
+    heroImages: string[];
+    priceText: string;
+    originPriceText: string;
+    stockText: string;
+    title: string;
+    titleAccent: string;
+    badges: string[];
+    descriptionLines: string[];
+    notices: Array<{ id: string; level: "warn" | "error" | "info"; text: string }>;
+  } | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setLoading(true);
+        const product = await fetchMiniProductDetail(productId);
+        setDetail({
+          heroImages: product.heroImages,
+          priceText: `¥${product.price.toFixed(2)}`,
+          originPriceText: product.originPrice ? `¥${product.originPrice.toFixed(2)}` : "",
+          stockText: product.stockText || "",
+          title: product.name,
+          titleAccent: product.titleAccent || "",
+          badges: product.badges ?? [],
+          descriptionLines: product.descriptionLines ?? [],
+          notices: product.notices ?? []
+        });
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "加载商品失败",
+          icon: "none"
+        });
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [productId]);
 
   const handleToggleFavorite = () => {
     // TODO(backend): 接入收藏/取消收藏接口，返回真实收藏状态
@@ -68,6 +63,14 @@ const GoodsDetailPage = () => {
     // TODO(backend): 接入下单接口（套餐、数量、支付）
     void Taro.showToast({ title: "立即下单（Mock）", icon: "none" });
   };
+
+  if (loading || !detail) {
+    return (
+      <View className="goodsDetail">
+        <View className="goodsDetail__footer" />
+      </View>
+    );
+  }
 
   return (
     <View className="goodsDetail">
@@ -90,7 +93,7 @@ const GoodsDetailPage = () => {
             current={currentSwiperIndex}
             onChange={(event) => setCurrentSwiperIndex(event.detail.current)}
           >
-            {mockGoodsDetail.heroImages.map((imageUrl) => (
+            {detail.heroImages.map((imageUrl) => (
               <SwiperItem key={imageUrl}>
                 <Image className="goodsDetail__heroImage" src={imageUrl} mode="aspectFill" />
               </SwiperItem>
@@ -100,14 +103,18 @@ const GoodsDetailPage = () => {
           <View className="goodsDetail__heroMask" />
           <View className="goodsDetail__heroPrice">
             <View className="goodsDetail__priceRow">
-              <Text className="goodsDetail__price">{mockGoodsDetail.priceText}</Text>
-              <Text className="goodsDetail__originPrice">{mockGoodsDetail.originPriceText}</Text>
-              <View className="goodsDetail__stockChip">
-                <Text className="goodsDetail__stockChipText">{mockGoodsDetail.stockText}</Text>
-              </View>
+              <Text className="goodsDetail__price">{detail.priceText}</Text>
+              {detail.originPriceText ? (
+                <Text className="goodsDetail__originPrice">{detail.originPriceText}</Text>
+              ) : null}
+              {detail.stockText ? (
+                <View className="goodsDetail__stockChip">
+                  <Text className="goodsDetail__stockChipText">{detail.stockText}</Text>
+                </View>
+              ) : null}
             </View>
             <View className="goodsDetail__dotRow">
-              {mockGoodsDetail.heroImages.map((item, index) => (
+              {detail.heroImages.map((item, index) => (
                 <View
                   key={item}
                   className={`goodsDetail__dot ${index === currentSwiperIndex ? "goodsDetail__dot--active" : ""}`}
@@ -120,11 +127,13 @@ const GoodsDetailPage = () => {
         <View className="goodsDetail__content">
           <View className="goodsDetail__header">
             <Text className="goodsDetail__title">
-              {mockGoodsDetail.title}
-              <Text className="goodsDetail__titleAccent">{mockGoodsDetail.titleAccent}</Text>
+              {detail.title}
+              {detail.titleAccent ? (
+                <Text className="goodsDetail__titleAccent">{detail.titleAccent}</Text>
+              ) : null}
             </Text>
             <View className="goodsDetail__badgeRow">
-              {mockGoodsDetail.badges.map((badgeText, index) => (
+              {detail.badges.map((badgeText, index) => (
                 <View
                   key={badgeText}
                   className={`goodsDetail__badge ${index === 0 ? "goodsDetail__badge--signal" : ""} ${index === 3 ? "goodsDetail__badge--primary" : ""}`}
@@ -139,7 +148,7 @@ const GoodsDetailPage = () => {
           <View className="goodsDetail__card goodsDetail__descCard">
             <Text className="goodsDetail__cardTitle">商品说明</Text>
             <View className="goodsDetail__descContent">
-              {mockGoodsDetail.descriptionLines.map((lineText) => (
+              {detail.descriptionLines.map((lineText) => (
                 <Text key={lineText} className="goodsDetail__descText">
                   {lineText}
                 </Text>
@@ -152,7 +161,7 @@ const GoodsDetailPage = () => {
               <Text className="goodsDetail__sectionTitle">下单须知</Text>
             </View>
             <View className="goodsDetail__noticeList">
-              {mockGoodsDetail.notices.map((notice) => (
+              {detail.notices.map((notice) => (
                 <View key={notice.id} className="goodsDetail__noticeItem">
                   <View
                     className={`goodsDetail__noticeDot ${notice.level === "error" ? "goodsDetail__noticeDot--error" : "goodsDetail__noticeDot--info"}`}
