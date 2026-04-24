@@ -3,126 +3,47 @@ import { Avatar, Button, Card, Form, Input, Select, Table, Tag, Typography, mess
 import { type ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAdminAuthSession } from "../../services/auth/session";
+import {
+  requestCustomerServiceAgents,
+  requestDisableCustomerServiceAgent,
+  requestEnableCustomerServiceAgent
+} from "../../services/customer-service/api";
+import { type CustomerServiceAgent } from "../../services/customer-service/types";
 
-type ServiceAgentStatus = "online" | "offline" | "busy";
-type ServiceAgentRole = "admin" | "specialist";
-
-type ServiceAgent = {
-  id: string;
-  name: string;
-  role: ServiceAgentRole;
-  teamName: string;
-  status: ServiceAgentStatus;
-  handledOrderCount: number;
-  createdAt: string;
-  completionRatio: number;
-  avatarUrl: string;
-};
-
-// TODO(backend): 接入客服管理列表接口（支持分页、搜索、状态筛选）
-const mockAgents: ServiceAgent[] = [
-  {
-    id: "CS-9021",
-    name: "张思语",
-    role: "admin",
-    teamName: "核心服务组",
-    status: "online",
-    handledOrderCount: 1284,
-    createdAt: "2023-05-12",
-    completionRatio: 85,
-    avatarUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCZJJ2Jra4X1J6psoi01_5wPZXrJKT2coSXad8dWrQcQD6YTjVG6wk0oq9XPeYuG8CeDrJL92wB9zhxbTi0uuygsY3zQhl4UpalJ2SsTppH60OkEy74ADPYqpzDPM5-GHiUdXEzdcE2O_wQkg2G8qeaG0BLdaejMHMQ3dZRvzIjE2_tBgwF81hdIHBzRu_FZ0L0zI-f2WGvpf_u5P28ofo4AmSjDgUraKTIFyyl1hVqlH2Ymj9bGJOVrhKp2ElQt9PaMyMV9H7zEi4"
-  },
-  {
-    id: "CS-9104",
-    name: "王晓晨",
-    role: "specialist",
-    teamName: "投诉处理组",
-    status: "offline",
-    handledOrderCount: 842,
-    createdAt: "2023-08-22",
-    completionRatio: 60,
-    avatarUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCkLD7GxJpZCBMTPwdFn41FVBS4y23knC1Ha9c7k3CJY4Th703yu7FvxJtO_T7BSce0MQ59o1LsqOMjNB3vq-wgImXbWuuPDQODbjsMyKEoYrJc6zvD7nj4jdNg6p0CQvcuYdtR07_8J-kvsp8scRS6fbKzJj5-P1W_kNmrpL3WGOS9Ag4pn2rO7TNivN8rPrsJx2AmdSSbK1Tp27hNC3yf908soLDP89qARErgBN8PasnDdQn8lSW56NGDlnf_THQ8yeADFxGWgcI"
-  },
-  {
-    id: "CS-8852",
-    name: "刘志强",
-    role: "specialist",
-    teamName: "核心服务组",
-    status: "busy",
-    handledOrderCount: 2410,
-    createdAt: "2022-11-05",
-    completionRatio: 95,
-    avatarUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDDtItDc6L9yYVzVty1jOP-2wWcH5GYyCnfu_g_WUMlhx1nb4F27nREQQ-Wm4oca7Da6XJY1_gi14PYNLRduv95ViNXlLJ8wdx8amspns9mZkGD107olD5x4InIoh6lzChnBwNjgHjletBLstsI8z6x8M1XvotHAfTDFxSLATZDdfNsfAPcS01s6OWA62YVtIUN186yrBEQVlewwF8pAPgsXeAxWmM_VrEWT4tYCpm6mUCgkROcRv4NDiuYB57ckPhx8umNlkA6UHs"
-  },
-  {
-    id: "CS-9322",
-    name: "陈美琳",
-    role: "specialist",
-    teamName: "大客户服务",
-    status: "online",
-    handledOrderCount: 533,
-    createdAt: "2024-01-15",
-    completionRatio: 40,
-    avatarUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAOqIsFHQuoDHZVr7djtFtEc11-0CirSoTe2-0YyXnHLIib8FXpyHBkZXrEUL8IfKTGdaUnXgUrGZydj7QlMmNIzBzKWgueQ-WzrOu9R4bsfYUY5GoOdTKY3hg3UyzF5MneX9oJL-uu8HZmoRWoO_cBOgtFiILxHFAISAhXQwdbK9CipGSvbDrj4OBp_Qv_cw_FntVuA8vow1t0VPXbHuZ45IPm_G_l7ogiC5uOOkwFbWtpMxC7w5aE_7-jSAJJJXrWqMxLQt3XiqU"
-  },
-  {
-    id: "CS-9541",
-    name: "周杰",
-    role: "specialist",
-    teamName: "投诉处理组",
-    status: "online",
-    handledOrderCount: 112,
-    createdAt: "2024-03-02",
-    completionRatio: 10,
-    avatarUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCmnCu0T3G8zLH9TY-fdP4CTQ-zPudKhdZlwKnYn9S50V3qVL74HMemIKrAe-c-gnfrjcjGvBBUSIxV0X9erNcTvH_f8RtM8cw7wHCstcqP2CBjyRd9I3wVcmqO7du-9IKxNVH9Ea7ZAjJty2NBk3dsad-y_TGXAxKffIkCbPtsLOTNKjog_mkmWar7N-ky18jkPbv_ZqF6o7szyd0e-phTxhSBjXrW6R6wU2DYasrADDP2bNhkYUL4ZM4V6by5SfAq-lNtIGo4vg0"
-  }
-];
-
-const statusLabelMap: Record<ServiceAgentStatus, string> = {
-  online: "在线",
-  offline: "离线",
-  busy: "忙碌"
-};
-
-const statusTagColorMap: Record<ServiceAgentStatus, string> = {
-  online: "success",
-  offline: "default",
-  busy: "warning"
-};
+type AccountStatusFilter = "all" | "normal" | "disabled";
 
 export const CustomerServiceManagementPage = () => {
+  const session = getAdminAuthSession();
+  const accessToken = session?.accessToken ?? "";
   const [keyword, setKeyword] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | ServiceAgentStatus>("all");
-  const [rows, setRows] = useState<ServiceAgent[]>([]);
+  const [statusFilter, setStatusFilter] = useState<AccountStatusFilter>("all");
+  const [rows, setRows] = useState<CustomerServiceAgent[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const currentQuery = {
     keyword: keyword.trim(),
-    status: statusFilter === "all" ? undefined : statusFilter
+    disabled: statusFilter === "all" ? undefined : statusFilter === "disabled" ? true : false
   };
 
-  const loadAgents = useCallback((filters?: { keyword?: string; status?: ServiceAgentStatus }) => {
-    setLoading(true);
-    // TODO(backend): 用 keyword/status 参数请求客服管理列表接口
-    const nextRows = mockAgents.filter((agent) => {
-      const normalizedKeyword = filters?.keyword?.trim().toLowerCase() ?? "";
-      const hitKeyword =
-        normalizedKeyword.length === 0 ||
-        agent.name.toLowerCase().includes(normalizedKeyword) ||
-        agent.id.toLowerCase().includes(normalizedKeyword) ||
-        agent.teamName.toLowerCase().includes(normalizedKeyword);
-      const hitStatus = !filters?.status || agent.status === filters.status;
-      return hitKeyword && hitStatus;
-    });
-    setRows(nextRows);
-    setLoading(false);
-  }, []);
+  const loadAgents = useCallback(
+    (filters?: { keyword?: string; disabled?: boolean }) => {
+      if (!accessToken) return;
+      setLoading(true);
+      void (async () => {
+        try {
+          const data = await requestCustomerServiceAgents(accessToken, filters);
+          setRows(data.items);
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : "加载客服列表失败");
+        } finally {
+          setLoading(false);
+        }
+      })();
+    },
+    [accessToken]
+  );
 
   useEffect(() => {
     loadAgents();
@@ -133,17 +54,36 @@ export const CustomerServiceManagementPage = () => {
   };
 
   const handleRefresh = () => {
-    // TODO(backend): 重新请求客服列表接口（保留当前筛选参数）
     loadAgents(currentQuery);
-    message.success("已刷新（Mock）");
+    message.success("已刷新");
   };
 
-  const handleAgentAction = (
-    agent: ServiceAgent,
-    action: "view" | "edit" | "permission" | "disable"
-  ) => {
-    // TODO(backend): 根据 action 跳转/调用对应接口（详情、编辑、权限配置、禁用）
-    message.info(`${agent.name} - ${action}（Mock）`);
+  const handleOpenView = (agent: CustomerServiceAgent) => {
+    void navigate(`/customer-service-management/edit/${encodeURIComponent(agent.id)}`, {
+      state: { readOnly: true }
+    });
+  };
+
+  const handleOpenEdit = (agent: CustomerServiceAgent) => {
+    void navigate(`/customer-service-management/edit/${encodeURIComponent(agent.id)}`);
+  };
+
+  const handleToggleDisabled = (agent: CustomerServiceAgent) => {
+    if (!accessToken) return;
+    void (async () => {
+      try {
+        if (agent.disabled) {
+          await requestEnableCustomerServiceAgent(accessToken, agent.id);
+          message.success(`${agent.nickname} 已恢复为正常`);
+        } else {
+          await requestDisableCustomerServiceAgent(accessToken, agent.id);
+          message.success(`${agent.nickname} 已禁用`);
+        }
+        loadAgents(currentQuery);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : "操作失败");
+      }
+    })();
   };
 
   const handleSearch = () => {
@@ -156,7 +96,7 @@ export const CustomerServiceManagementPage = () => {
     loadAgents();
   };
 
-  const columns: ColumnsType<ServiceAgent> = [
+  const columns: ColumnsType<CustomerServiceAgent> = [
     {
       title: "客服头像",
       dataIndex: "avatarUrl",
@@ -166,21 +106,21 @@ export const CustomerServiceManagementPage = () => {
     },
     {
       title: "客服昵称",
-      dataIndex: "name",
+      dataIndex: "nickname",
       key: "name",
       render: (_, agent) => (
         <div>
-          <p className="text-sm font-semibold">{agent.name}</p>
+          <p className="text-sm font-semibold">{agent.nickname}</p>
           <p className="text-[10px] text-slate-500">ID: {agent.id}</p>
         </div>
       )
     },
     {
       title: "状态",
-      dataIndex: "status",
-      key: "status",
-      render: (status: ServiceAgentStatus) => (
-        <Tag color={statusTagColorMap[status]}>{statusLabelMap[status]}</Tag>
+      dataIndex: "disabled",
+      key: "disabled",
+      render: (disabled: boolean) => (
+        <Tag color={disabled ? "error" : "success"}>{disabled ? "禁用" : "正常"}</Tag>
       )
     },
     {
@@ -191,24 +131,22 @@ export const CustomerServiceManagementPage = () => {
     {
       title: "操作",
       key: "actions",
+      align: "left",
       render: (_, agent) => (
-        <div className="flex items-center justify-end gap-1">
-          <Button type="text" size="small" onClick={() => handleAgentAction(agent, "view")}>
+        <div className="flex flex-wrap items-center justify-start gap-1">
+          <Button type="text" size="small" onClick={() => handleOpenView(agent)}>
             查看
           </Button>
-          <Button type="text" size="small" onClick={() => handleAgentAction(agent, "edit")}>
+          <Button type="text" size="small" onClick={() => handleOpenEdit(agent)}>
             编辑
           </Button>
-          <Button type="text" size="small" onClick={() => handleAgentAction(agent, "permission")}>
-            权限
-          </Button>
           <Button
-            danger
+            danger={!agent.disabled}
             type="text"
             size="small"
-            onClick={() => handleAgentAction(agent, "disable")}
+            onClick={() => handleToggleDisabled(agent)}
           >
-            禁用
+            {agent.disabled ? "启用" : "禁用"}
           </Button>
         </div>
       )
@@ -223,7 +161,7 @@ export const CustomerServiceManagementPage = () => {
             客服管理
           </Typography.Title>
           <Typography.Paragraph className="!mb-0 !text-slate-500">
-            管理并监控所有在线客服人员的状态与效率（老板与管理员可见）
+            管理客服账号与启用状态（老板与管理员可见）
           </Typography.Paragraph>
         </div>
         <Button
@@ -246,16 +184,15 @@ export const CustomerServiceManagementPage = () => {
               placeholder="请输入客服昵称或 ID"
             />
           </Form.Item>
-          <Form.Item className="mb-0 w-[220px]" label="客服状态">
+          <Form.Item className="mb-0 w-[220px]" label="账号状态">
             <Select
               className="w-full"
               value={statusFilter}
               onChange={(value) => setStatusFilter(value)}
               options={[
-                { label: "全部状态", value: "all" },
-                { label: "在线", value: "online" },
-                { label: "离线", value: "offline" },
-                { label: "忙碌", value: "busy" }
+                { label: "全部", value: "all" },
+                { label: "正常", value: "normal" },
+                { label: "禁用", value: "disabled" }
               ]}
             />
           </Form.Item>

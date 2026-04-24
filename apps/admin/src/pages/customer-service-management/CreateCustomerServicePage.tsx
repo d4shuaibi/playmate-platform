@@ -1,15 +1,33 @@
 import { ArrowLeftOutlined, CameraOutlined, QrcodeOutlined } from "@ant-design/icons";
 import { Button, Card, Form, Input, Typography, Upload, message } from "antd";
+import type { UploadFile } from "antd/es/upload/interface";
 import { useNavigate } from "react-router-dom";
+import { getAdminAuthSession } from "../../services/auth/session";
+import {
+  requestCreateCustomerServiceAgent,
+  requestUploadFile
+} from "../../services/customer-service/api";
 
 type CreateServiceFormValues = {
   nickname: string;
   wechatId: string;
+  avatarFiles: UploadFile[];
+  wechatQrFiles: UploadFile[];
 };
 
 export const CreateCustomerServicePage = () => {
   const [form] = Form.useForm<CreateServiceFormValues>();
   const navigate = useNavigate();
+  const session = getAdminAuthSession();
+  const accessToken = session?.accessToken ?? "";
+
+  const normalizeUploadFiles = (event: { fileList: UploadFile[] } | UploadFile[]) => {
+    if (Array.isArray(event)) {
+      return event;
+    }
+
+    return event?.fileList ?? [];
+  };
 
   const handleGoBack = () => {
     void navigate("/customer-service-management");
@@ -18,13 +36,43 @@ export const CreateCustomerServicePage = () => {
   const handleSubmit = () => {
     void (async () => {
       try {
+        if (!accessToken) {
+          message.error("登录已失效，请重新登录");
+          void navigate("/login");
+          return;
+        }
+
         const values = await form.validateFields();
-        // TODO(backend): 调用新增客服接口，提交昵称/微信号/头像/二维码
-        // TODO(backend): 上传头像与微信二维码，拿到文件 URL 后一起提交创建接口
-        message.success(`新增客服成功（Mock）：${values.nickname}`);
+
+        const avatarFile = values.avatarFiles?.[0]?.originFileObj;
+        const qrFile = values.wechatQrFiles?.[0]?.originFileObj;
+        if (!(avatarFile instanceof File)) {
+          message.error("头像文件无效，请重新选择");
+          return;
+        }
+        if (!(qrFile instanceof File)) {
+          message.error("二维码文件无效，请重新选择");
+          return;
+        }
+
+        const [avatarUploaded, qrUploaded] = await Promise.all([
+          requestUploadFile(accessToken, avatarFile),
+          requestUploadFile(accessToken, qrFile)
+        ]);
+
+        await requestCreateCustomerServiceAgent(accessToken, {
+          nickname: values.nickname.trim(),
+          wechatId: values.wechatId.trim(),
+          avatarUrl: avatarUploaded.url,
+          wechatQrUrl: qrUploaded.url
+        });
+
+        message.success("新增客服成功");
         void navigate("/customer-service-management");
-      } catch {
-        // Antd 表单会展示校验错误，这里无需额外处理
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "提交失败";
+        if (errorMessage.includes("required")) return;
+        message.error(errorMessage);
       }
     })();
   };
@@ -64,16 +112,17 @@ export const CreateCustomerServicePage = () => {
               >
                 <Input placeholder="请输入微信账号" />
               </Form.Item>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <Typography.Text className="mb-2 block">头像上传</Typography.Text>
+              <Form.Item
+                label="头像上传"
+                name="avatarFiles"
+                valuePropName="fileList"
+                getValueFromEvent={normalizeUploadFiles}
+                rules={[{ required: true, message: "请上传头像" }]}
+              >
                 <Upload
                   listType="picture-card"
                   maxCount={1}
                   beforeUpload={() => {
-                    // TODO(backend): 上传客服头像到文件服务
                     return false;
                   }}
                 >
@@ -82,15 +131,19 @@ export const CreateCustomerServicePage = () => {
                     <span className="text-xs">上传头像</span>
                   </div>
                 </Upload>
-              </div>
+              </Form.Item>
 
-              <div>
-                <Typography.Text className="mb-2 block">微信二维码</Typography.Text>
+              <Form.Item
+                label="微信二维码"
+                name="wechatQrFiles"
+                valuePropName="fileList"
+                getValueFromEvent={normalizeUploadFiles}
+                rules={[{ required: true, message: "请上传微信二维码" }]}
+              >
                 <Upload
                   listType="picture-card"
                   maxCount={1}
                   beforeUpload={() => {
-                    // TODO(backend): 上传微信二维码到文件服务
                     return false;
                   }}
                 >
@@ -99,7 +152,7 @@ export const CreateCustomerServicePage = () => {
                     <span className="text-xs">上传二维码</span>
                   </div>
                 </Upload>
-              </div>
+              </Form.Item>
             </div>
           </div>
 

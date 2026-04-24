@@ -143,7 +143,7 @@ export const AppLayout = () => {
               <NavLink
                 key={item.key}
                 to={item.path}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-l font-medium transition-all ${
                   isActive
                     ? "bg-white text-blue-600 shadow-sm"
                     : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"

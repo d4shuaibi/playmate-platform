@@ -7,6 +7,7 @@ import { RequireAdminAuth, RequireAdminPermission, RequireAdminRole } from "./gu
 import { SystemOverviewPage } from "../pages/system-overview/SystemOverviewPage";
 import { CustomerServiceManagementPage } from "../pages/customer-service-management/CustomerServiceManagementPage";
 import { CreateCustomerServicePage } from "../pages/customer-service-management/CreateCustomerServicePage";
+import { EditCustomerServicePage } from "../pages/customer-service-management/EditCustomerServicePage";
 import { AdminManagementPage } from "../pages/admin-management/AdminManagementPage";
 import { getAdminAuthSession, getAdminDefaultPath } from "../services/auth/session";
 
@@ -51,6 +52,14 @@ export const AppRouter = () => {
             element={
               <RequireAdminPermission permission="customer_service.write">
                 <CreateCustomerServicePage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/customer-service-management/edit/:id"
+            element={
+              <RequireAdminPermission permission="customer_service.write">
+                <EditCustomerServicePage />
               </RequireAdminPermission>
             }
           />

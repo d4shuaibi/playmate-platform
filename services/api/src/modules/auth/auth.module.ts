@@ -21,6 +21,6 @@ import { AdminPermissionGuard } from "./admin-permission.guard";
     WechatPhoneService,
     PrismaService
   ],
-  exports: [AuthService]
+  exports: [AuthService, AdminAuthService, AdminAuthGuard, AdminPermissionGuard]
 })
 export class AuthModule {}
