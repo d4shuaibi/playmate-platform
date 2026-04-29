@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from "@tarojs/components";
 import "./index.scss";
 
 /**
- * 协议说明页：文案为夜曲电竞小程序占位说明，上线前可由法务替换为正式版本。
+ * 协议说明页：文案为澜动电竞小程序占位说明，上线前可由法务替换为正式版本。
  */
 const AgreementPage = () => {
   return (
@@ -12,7 +12,7 @@ const AgreementPage = () => {
         我们深知个人信息对您的重要性，将严格遵守法律法规，遵循隐私保护原则，为您提供更安全、可靠的服务。
       </Text>
       <Text className="agreementPage__paragraph">
-        本说明适用于夜曲电竞小程序向您提供的陪玩/代练信息展示与下单相关服务。在您使用本小程序前，请仔细阅读各条款；涉及敏感个人信息处理时，我们将在具体场景再次征得您的同意。
+        本说明适用于澜动电竞小程序向您提供的陪玩/代练信息展示与下单相关服务。在您使用本小程序前，请仔细阅读各条款；涉及敏感个人信息处理时，我们将在具体场景再次征得您的同意。
       </Text>
       <Text className="agreementPage__subtitle">1. 账号注册与登录</Text>
       <Text className="agreementPage__paragraph">

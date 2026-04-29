@@ -158,7 +158,7 @@ const UserHomePage = () => {
         <View className="userHome__brandRow">
           <View className="userHome__brandLeft">
             <View className="userHome__avatar" />
-            <Text className="userHome__brandName">夜曲电竞</Text>
+            <Text className="userHome__brandName">澜动电竞</Text>
           </View>
           <View className="userHome__brandRight">
             <View className="userHome__iconBtn" aria-label="通知">

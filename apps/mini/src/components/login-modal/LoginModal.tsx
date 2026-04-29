@@ -79,7 +79,7 @@ export const LoginModal = (props: LoginModalProps) => {
       <View className="loginModal__panel">
         <View className="loginModal__content">
           <Text className="loginModal__intro">
-            欢迎使用夜曲电竞小程序。根据法律要求，使用前请仔细阅读
+            欢迎使用澜动电竞小程序。根据法律要求，使用前请仔细阅读
           </Text>
           <View className="loginModal__links">
             <Text className="loginModal__link" onClick={handleOpenAgreement}>
