@@ -105,6 +105,14 @@
   display: block;
 }
 
+.incomeWorker__heroSub {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(203, 195, 215, 0.76);
+  display: block;
+}
+
 .incomeWorker__hintCard {
   margin-top: 14px;
   border-radius: 14px;
@@ -126,6 +134,11 @@
   line-height: 1.5;
   color: rgba(203, 195, 215, 0.72);
   display: block;
+}
+
+.incomeWorker__hintCard--flat {
+  margin-top: 10px;
+  opacity: 0.92;
 }
 
 .incomeWorker__sectionHeader {

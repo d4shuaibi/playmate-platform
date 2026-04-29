@@ -1,9 +1,15 @@
-import { View, Text, ScrollView, Input } from "@tarojs/components";
-import Taro from "@tarojs/taro";
-import { useMemo, useState } from "react";
+import { View, Text, ScrollView, Input, Image } from "@tarojs/components";
+import Taro, { useDidShow } from "@tarojs/taro";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import { getRole } from "../../utils/role";
+import {
+  fetchMiniOrders,
+  type MiniOrder,
+  type MiniOrderStatus,
+  type MiniOrderTabCounts
+} from "../../services/orders";
 
 type OrderStatusKey =
   | "all"
@@ -18,21 +24,23 @@ type OrderTab = {
   label: string;
 };
 
+type OrderAccent = "primary" | "secondary" | "error" | "neutral";
+
 type OrderCard = {
   id: string;
   orderNo: string;
-  statusKey: Exclude<OrderStatusKey, "all">;
+  statusKey: MiniOrderStatus;
   statusLabel: string;
   title: string;
   createdAtText: string;
   amountText: string;
   planText: string;
-  accent: "primary" | "secondary" | "error" | "neutral";
+  accent: OrderAccent;
   actionLabel: string;
+  coverImage: string;
 };
 
-const mockTabs: OrderTab[] = [
-  // TODO(backend): 后端返回订单状态枚举与数量
+const TAB_DEFS: OrderTab[] = [
   { key: "all", label: "全部" },
   { key: "pendingPay", label: "待付款" },
   { key: "pendingTake", label: "待接单" },
@@ -41,75 +49,121 @@ const mockTabs: OrderTab[] = [
   { key: "cancelled", label: "已取消" }
 ];
 
-const mockOrders: OrderCard[] = [
-  // TODO(backend): 订单列表接口：订单号/状态/标题/下单时间/金额/套餐/封面图/可执行操作等
-  {
-    id: "o1",
-    orderNo: "ORD-8829-X",
-    statusKey: "serving",
-    statusLabel: "服务中",
-    title: "暗区突围：全地图红卡带出",
-    createdAtText: "下单时间：2023.11.24 14:30",
-    amountText: "¥ 2,899.00",
-    planText: "至尊服务",
-    accent: "secondary",
-    actionLabel: "查看详情"
-  },
-  {
-    id: "o2",
-    orderNo: "ORD-7741-K",
-    statusKey: "pendingPay",
-    statusLabel: "待付款",
-    title: "使命召唤：现代战争 III 全皮肤解锁",
-    createdAtText: "下单时间：2023.11.24 12:15",
-    amountText: "¥ 599.00",
-    planText: "标准套餐",
-    accent: "primary",
-    actionLabel: "去支付"
-  },
-  {
-    id: "o3",
-    orderNo: "ORD-6620-M",
-    statusKey: "pendingTake",
-    statusLabel: "待接单",
-    title: "英雄联盟：S14 赛季全区大师直达",
-    createdAtText: "下单时间：2023.11.23 21:00",
-    amountText: "¥ 1,200.00",
-    planText: "精英服务",
-    accent: "neutral",
-    actionLabel: "查看详情"
-  },
-  {
-    id: "o4",
-    orderNo: "ORD-5512-Z",
-    statusKey: "cancelled",
-    statusLabel: "已取消",
-    title: "绝地求生：百强选手组队带打",
-    createdAtText: "下单时间：2023.11.23 18:45",
-    amountText: "¥ 150.00",
-    planText: "团队护航",
-    accent: "error",
-    actionLabel: "查看详情"
-  }
-];
+const STATUS_LABEL: Record<MiniOrderStatus, string> = {
+  pendingPay: "待付款",
+  pendingTake: "待接单",
+  serving: "服务中",
+  pendingDone: "待结单",
+  done: "已完成",
+  cancelled: "已取消"
+};
+
+const EMPTY_COUNTS: MiniOrderTabCounts = {
+  all: 0,
+  pendingPay: 0,
+  pendingTake: 0,
+  serving: 0,
+  pendingDone: 0,
+  cancelled: 0,
+  refundAfterSale: 0
+};
+
+/** 列表卡片左侧强调色 */
+const resolveAccent = (status: MiniOrderStatus): OrderAccent => {
+  if (status === "pendingPay") return "primary";
+  if (status === "pendingTake") return "neutral";
+  if (status === "serving" || status === "pendingDone") return "secondary";
+  if (status === "cancelled") return "error";
+  return "neutral";
+};
+
+/** 金额展示（元） */
+const formatMoney = (amount: number): string => {
+  const text = amount.toLocaleString("zh-CN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  return `¥ ${text}`;
+};
+
+/** 将接口订单映射为卡片展示模型 */
+const mapOrderToCard = (order: MiniOrder): OrderCard => {
+  const statusKey = order.status;
+  const actionLabel = statusKey === "pendingPay" ? "去支付" : "查看详情";
+  return {
+    id: order.id,
+    orderNo: order.orderNo,
+    statusKey,
+    statusLabel: STATUS_LABEL[statusKey],
+    title: order.serviceTitle,
+    createdAtText: `下单时间：${order.createdAt}`,
+    amountText: formatMoney(order.amount),
+    planText: order.packageTag,
+    accent: resolveAccent(statusKey),
+    actionLabel,
+    coverImage: order.coverImage
+  };
+};
+
+/** Tab 文案带上数量 */
+const formatTabLabel = (tab: OrderTab, counts: MiniOrderTabCounts): string => {
+  if (tab.key === "all") return `${tab.label} (${counts.all})`;
+  const n = counts[tab.key];
+  return `${tab.label} (${n})`;
+};
 
 const OrdersPage = () => {
   const role = getRole();
   const [activeTab, setActiveTab] = useState<OrderStatusKey>("all");
   const [keyword, setKeyword] = useState("");
+  const [orders, setOrders] = useState<MiniOrder[]>([]);
+  const [counts, setCounts] = useState<MiniOrderTabCounts>(EMPTY_COUNTS);
+  const [loading, setLoading] = useState(false);
+  const skipDidShowOnceRef = useRef(true);
 
-  const visibleOrders = useMemo(() => {
-    const byTab =
-      activeTab === "all" ? mockOrders : mockOrders.filter((o) => o.statusKey === activeTab);
-    const trimmed = keyword.trim();
-    if (!trimmed) return byTab;
-    return byTab.filter((o) => o.orderNo.includes(trimmed) || o.title.includes(trimmed));
+  const cards = useMemo(() => orders.map(mapOrderToCard), [orders]);
+
+  const loadOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      const statusFilter = activeTab === "all" ? undefined : activeTab;
+      const data = await fetchMiniOrders({
+        keyword: keyword.trim(),
+        status: statusFilter,
+        page: 1,
+        pageSize: 50
+      });
+      setOrders(data.items);
+      setCounts(data.counts);
+    } catch (error: unknown) {
+      void Taro.showToast({
+        title: error instanceof Error ? error.message : "加载订单失败",
+        icon: "none"
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [activeTab, keyword]);
 
-  const handleAction = (order: OrderCard) => {
-    // TODO(backend): 根据动作类型跳转真实支付页/详情页（当前统一先进入订单详情页）
+  useEffect(() => {
+    const delayMs = keyword.trim() ? 400 : 0;
+    const timer = setTimeout(() => {
+      void loadOrders();
+    }, delayMs);
+    return () => clearTimeout(timer);
+  }, [loadOrders]);
+
+  useDidShow(() => {
+    if (skipDidShowOnceRef.current) {
+      skipDidShowOnceRef.current = false;
+      return;
+    }
+    void loadOrders();
+  });
+
+  const handleOpenDetail = (order: Pick<OrderCard, "id">) => {
     void Taro.navigateTo({
-      url: `/pages/order-detail/index?id=${encodeURIComponent(order.id)}&status=${encodeURIComponent(order.statusKey)}`
+      url: `/pages/order-detail/index?id=${encodeURIComponent(order.id)}`
     });
   };
 
@@ -142,7 +196,7 @@ const OrdersPage = () => {
 
         <ScrollView className="ordersPage__tabs" scrollX enhanced showScrollbar={false}>
           <View className="ordersPage__tabsInner">
-            {mockTabs.map((tab) => {
+            {TAB_DEFS.map((tab) => {
               const isActive = tab.key === activeTab;
               return (
                 <View
@@ -154,7 +208,7 @@ const OrdersPage = () => {
                   <Text
                     className={`ordersPage__tabText ${isActive ? "ordersPage__tabText--active" : ""}`}
                   >
-                    {tab.label}
+                    {formatTabLabel(tab, counts)}
                   </Text>
                 </View>
               );
@@ -162,49 +216,66 @@ const OrdersPage = () => {
           </View>
         </ScrollView>
 
+        {loading ? (
+          <View className="ordersPage__empty">
+            <Text className="ordersPage__emptyText">加载中…</Text>
+          </View>
+        ) : null}
+
         <View className="ordersPage__list">
-          {visibleOrders.map((o) => (
-            <View
-              key={o.id}
-              className={`ordersPage__card ordersPage__card--${o.accent}`}
-              onClick={() => handleAction(o)}
-              aria-label={`订单：${o.orderNo}`}
-            >
-              <View className="ordersPage__cardMain">
-                <View className="ordersPage__cover">
-                  <Text className="ordersPage__coverText">▣</Text>
-                </View>
-                <View className="ordersPage__info">
-                  <View className="ordersPage__infoTop">
-                    <Text className="ordersPage__orderNo">{o.orderNo}</Text>
-                    <View className={`ordersPage__statusChip ordersPage__statusChip--${o.accent}`}>
-                      <Text className="ordersPage__statusChipText">{o.statusLabel}</Text>
-                    </View>
+          {!loading &&
+            cards.map((o) => (
+              <View
+                key={o.id}
+                className={`ordersPage__card ordersPage__card--${o.accent}`}
+                onClick={() => handleOpenDetail(o)}
+                aria-label={`订单：${o.orderNo}`}
+              >
+                <View className="ordersPage__cardMain">
+                  <View className="ordersPage__cover">
+                    {o.coverImage ? (
+                      <Image
+                        className="ordersPage__coverImg"
+                        src={o.coverImage}
+                        mode="aspectFill"
+                      />
+                    ) : (
+                      <Text className="ordersPage__coverText">▣</Text>
+                    )}
                   </View>
-                  <Text className="ordersPage__title">{o.title}</Text>
-                  <Text className="ordersPage__time">{o.createdAtText}</Text>
+                  <View className="ordersPage__info">
+                    <View className="ordersPage__infoTop">
+                      <Text className="ordersPage__orderNo">{o.orderNo}</Text>
+                      <View
+                        className={`ordersPage__statusChip ordersPage__statusChip--${o.accent}`}
+                      >
+                        <Text className="ordersPage__statusChipText">{o.statusLabel}</Text>
+                      </View>
+                    </View>
+                    <Text className="ordersPage__title">{o.title}</Text>
+                    <Text className="ordersPage__time">{o.createdAtText}</Text>
+                  </View>
+                </View>
+
+                <View className="ordersPage__cardRight">
+                  <View className="ordersPage__amountBlock">
+                    <Text className="ordersPage__amount">{o.amountText}</Text>
+                    <Text className="ordersPage__plan">{o.planText}</Text>
+                  </View>
+                  <View
+                    className={`ordersPage__actionBtn ordersPage__actionBtn--${o.accent}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDetail(o);
+                    }}
+                  >
+                    <Text className="ordersPage__actionText">{o.actionLabel}</Text>
+                  </View>
                 </View>
               </View>
+            ))}
 
-              <View className="ordersPage__cardRight">
-                <View className="ordersPage__amountBlock">
-                  <Text className="ordersPage__amount">{o.amountText}</Text>
-                  <Text className="ordersPage__plan">{o.planText}</Text>
-                </View>
-                <View
-                  className={`ordersPage__actionBtn ordersPage__actionBtn--${o.accent}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAction(o);
-                  }}
-                >
-                  <Text className="ordersPage__actionText">{o.actionLabel}</Text>
-                </View>
-              </View>
-            </View>
-          ))}
-
-          {visibleOrders.length === 0 ? (
+          {!loading && cards.length === 0 ? (
             <View className="ordersPage__empty">
               <Text className="ordersPage__emptyText">暂无订单，换个筛选项试试</Text>
             </View>

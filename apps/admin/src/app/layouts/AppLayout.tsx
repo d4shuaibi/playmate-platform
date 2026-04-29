@@ -1,16 +1,14 @@
 import {
   AppstoreOutlined,
-  DashboardOutlined,
   NotificationOutlined,
   SearchOutlined,
   SafetyCertificateOutlined,
-  SettingOutlined,
   ShoppingCartOutlined,
   TeamOutlined,
   UserSwitchOutlined
 } from "@ant-design/icons";
 import { type ReactNode } from "react";
-import { Badge, Button, Input, Tag, Typography, message } from "antd";
+import { Badge, Button, Input, Tag, Typography } from "antd";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { appEnv } from "../../config/env";
 import { clearAdminAuthSession, getAdminAuthSession } from "../../services/auth/session";
@@ -34,26 +32,12 @@ export const AppLayout = () => {
 
   const navItems: NavItem[] = [
     {
-      key: "dashboard",
-      label: "系统总揽",
-      icon: <DashboardOutlined />,
-      path: "/system-overview",
-      permission: "system_overview.view"
-    },
-    {
       key: "adminManagement",
       label: "管理员管理",
       icon: <SafetyCertificateOutlined />,
       path: "/admin-management",
       permission: "admin.manage",
       role: "owner"
-    },
-    {
-      key: "home",
-      label: "系统首页",
-      icon: <AppstoreOutlined />,
-      path: "/home",
-      permission: "dashboard.view"
     },
     {
       key: "products",
@@ -89,12 +73,6 @@ export const AppLayout = () => {
       icon: <UserSwitchOutlined />,
       path: "/customer-service-management",
       permission: "customer_service.write"
-    },
-    {
-      key: "settings",
-      label: "系统设置",
-      icon: <SettingOutlined />,
-      permission: "settings.read"
     }
   ];
 
@@ -111,10 +89,6 @@ export const AppLayout = () => {
     }
     clearAdminAuthSession();
     void navigate("/login", { replace: true });
-  };
-
-  const handleDisabledNavClick = (label: string) => {
-    message.info(`${label}功能开发中`);
   };
 
   return (
@@ -137,18 +111,6 @@ export const AppLayout = () => {
         <nav className="flex flex-1 flex-col gap-1">
           {visibleNavItems.map((item) => {
             const isActive = Boolean(item.path) && location.pathname === item.path;
-            if (!item.path) {
-              return (
-                <button
-                  key={item.key}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-500 transition-all hover:bg-slate-100"
-                  onClick={() => handleDisabledNavClick(item.label)}
-                >
-                  <span>{item.icon}</span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            }
             return (
               <NavLink
                 key={item.key}
@@ -184,7 +146,6 @@ export const AppLayout = () => {
             <Badge dot>
               <Button type="text" shape="circle" icon={<NotificationOutlined />} />
             </Badge>
-            <Button type="text" shape="circle" icon={<SettingOutlined />} />
             <Tag
               color={
                 session?.profile.role === "owner"

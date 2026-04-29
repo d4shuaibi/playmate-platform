@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import {
   type Worker,
+  type WorkerAssessmentOptionDto,
   type WorkerAssessmentType,
   type WorkerJoinApplication,
   type WorkerJoinStatus,
@@ -11,6 +12,16 @@ import {
 type ApiEnvelope<T> =
   | { code: 0; message: string; data: T }
   | { code: number; message: string; data: null };
+
+/**
+ * 入驻考核类型选项（与 WorkerAssessmentType 一致；提交时会校验 value）
+ */
+const WORKER_ASSESSMENT_OPTIONS: WorkerAssessmentOptionDto[] = [
+  { value: "moba", label: "MOBA 技术考核（王者/LOL）", description: "MOBA 品类技术与配合" },
+  { value: "fps", label: "FPS 竞技考核（和平/永劫）", description: "FPS 射击与走位" },
+  { value: "strategy", label: "战术策略考核", description: "战术指挥与地图理解" },
+  { value: "all-around", label: "全能打手综合考核", description: "多品类综合能力" }
+];
 
 const nowText = () => {
   const d = new Date();
@@ -25,6 +36,12 @@ const buildRefNo = () => {
 const normalizePhone = (value: string) => value.trim();
 const normalizeIdNo = (value: string) => value.trim();
 const normalizeName = (value: string) => value.trim();
+
+const resolveAssessmentType = (raw: unknown): WorkerAssessmentType | null => {
+  const s = typeof raw === "string" ? raw.trim() : "";
+  const hit = WORKER_ASSESSMENT_OPTIONS.find((o) => o.value === s && !o.disabled);
+  return hit ? hit.value : null;
+};
 
 @Injectable()
 export class WorkerService {
@@ -112,25 +129,37 @@ export class WorkerService {
     return { code: 0, message: "ok", data: found };
   }
 
+  /**
+   * GET /api/mini/worker-join/assessment-options — 考核类型枚举（小程序表单）
+   */
+  listAssessmentOptions(): ApiEnvelope<{ items: WorkerAssessmentOptionDto[] }> {
+    return {
+      code: 0,
+      message: "ok",
+      data: { items: [...WORKER_ASSESSMENT_OPTIONS] }
+    };
+  }
+
   submitApplication(input: {
     userId: string;
     realName: string;
     age: number;
     phone: string;
     idNo: string;
-    assessmentType: WorkerAssessmentType;
+    assessmentType: unknown;
   }): ApiEnvelope<Pick<WorkerJoinApplication, "id" | "refNo" | "status">> {
     const realName = normalizeName(input.realName);
     const phone = normalizePhone(input.phone);
     const idNo = normalizeIdNo(input.idNo);
     const age = Math.floor(input.age);
+    const assessmentType = resolveAssessmentType(input.assessmentType);
 
     if (!realName) return { code: 400, message: "Missing realName", data: null };
     if (!Number.isFinite(age) || age <= 0) return { code: 400, message: "Invalid age", data: null };
     if (!phone) return { code: 400, message: "Missing phone", data: null };
     if (!idNo) return { code: 400, message: "Missing idNo", data: null };
-    if (!input.assessmentType) {
-      return { code: 400, message: "Missing assessmentType", data: null };
+    if (!assessmentType) {
+      return { code: 400, message: "Invalid assessmentType", data: null };
     }
 
     const existed = this.applications.find((item) => item.userId === input.userId);
@@ -147,7 +176,7 @@ export class WorkerService {
       age,
       phone,
       idNo,
-      assessmentType: input.assessmentType,
+      assessmentType,
       status: "reviewing",
       rejectReason: undefined,
       createdAt: existed?.createdAt ?? ts,

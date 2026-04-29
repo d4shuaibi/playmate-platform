@@ -50,9 +50,11 @@ export const getAdminDefaultPath = (profile: AdminAuthProfile | null | undefined
     permission?: AdminPermission;
     roles?: AdminAuthProfile["role"][];
   }> = [
-    { path: "/system-overview", permission: "system_overview.view" },
     { path: "/admin-management", permission: "admin.manage", roles: ["owner"] },
-    { path: "/home", permission: "dashboard.view" },
+    { path: "/order-management", permission: "order.read" },
+    { path: "/product-management", permission: "product.read" },
+    { path: "/product-category-management", permission: "product.write" },
+    { path: "/worker-management", permission: "worker.read" },
     { path: "/customer-service-management", permission: "customer_service.write" }
   ];
 
@@ -62,5 +64,5 @@ export const getAdminDefaultPath = (profile: AdminAuthProfile | null | undefined
     return true;
   });
 
-  return matched?.path ?? "/home";
+  return matched?.path ?? "/order-management";
 };

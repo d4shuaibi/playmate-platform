@@ -1,15 +1,14 @@
 import { View, Text, ScrollView, Input, Picker } from "@tarojs/components";
 import Taro from "@tarojs/taro";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./index.scss";
 import { getRole } from "../../utils/role";
-import { applyWorkerJoin } from "../../services";
+import {
+  applyWorkerJoin,
+  fetchWorkerAssessmentOptions,
+  type WorkerAssessmentOption
+} from "../../services";
 import { getToken } from "../../utils/session";
-
-type AssessmentOption = {
-  value: string;
-  label: string;
-};
 
 type JoinDraft = {
   realName: string;
@@ -19,17 +18,11 @@ type JoinDraft = {
   assessmentType: string;
 };
 
-// TODO(backend): 后端返回考核类型枚举（value/label/是否可用/说明）
-const mockAssessmentOptions: AssessmentOption[] = [
-  { value: "moba", label: "MOBA 技术考核 (王者/LOL)" },
-  { value: "fps", label: "FPS 竞技考核 (和平/永劫)" },
-  { value: "strategy", label: "战术策略考核" },
-  { value: "all-around", label: "全能打手综合考核" }
-];
-
 const WorkerJoinPage = () => {
   const role = getRole();
   const [submitting, setSubmitting] = useState(false);
+  const [assessmentOptions, setAssessmentOptions] = useState<WorkerAssessmentOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(true);
   const [draft, setDraft] = useState<JoinDraft>({
     realName: "",
     age: "",
@@ -38,15 +31,42 @@ const WorkerJoinPage = () => {
     assessmentType: ""
   });
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        setOptionsLoading(true);
+        const items = await fetchWorkerAssessmentOptions();
+        const filtered = items.filter((o) => !o.disabled);
+        setAssessmentOptions(filtered);
+        setDraft((prev) => {
+          const keep =
+            prev.assessmentType && filtered.some((option) => option.value === prev.assessmentType);
+          return {
+            ...prev,
+            assessmentType: keep ? prev.assessmentType : (filtered[0]?.value ?? "")
+          };
+        });
+      } catch (error: unknown) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "考核类型加载失败",
+          icon: "none"
+        });
+        setAssessmentOptions([]);
+      } finally {
+        setOptionsLoading(false);
+      }
+    })();
+  }, []);
+
   const assessmentIndex = useMemo(() => {
-    const idx = mockAssessmentOptions.findIndex((item) => item.value === draft.assessmentType);
+    const idx = assessmentOptions.findIndex((item) => item.value === draft.assessmentType);
     return idx >= 0 ? idx : 0;
-  }, [draft.assessmentType]);
+  }, [draft.assessmentType, assessmentOptions]);
 
   const selectedAssessmentLabel = useMemo(() => {
-    const selected = mockAssessmentOptions.find((item) => item.value === draft.assessmentType);
-    return selected?.label ?? "请选择考核类型";
-  }, [draft.assessmentType]);
+    const selected = assessmentOptions.find((item) => item.value === draft.assessmentType);
+    return selected?.label ?? (optionsLoading ? "加载考核类型…" : "请选择考核类型");
+  }, [draft.assessmentType, assessmentOptions, optionsLoading]);
 
   const canSubmit = useMemo(() => {
     if (!draft.realName.trim()) return false;
@@ -54,8 +74,9 @@ const WorkerJoinPage = () => {
     if (!draft.phone.trim()) return false;
     if (!draft.idNo.trim()) return false;
     if (!draft.assessmentType.trim()) return false;
+    if (assessmentOptions.length === 0) return false;
     return true;
-  }, [draft]);
+  }, [draft, assessmentOptions.length]);
 
   const handleGoBack = () => {
     const pages = Taro.getCurrentPages();
@@ -85,11 +106,7 @@ const WorkerJoinPage = () => {
           age: Number(draft.age),
           phone: draft.phone.trim(),
           idNo: draft.idNo.trim(),
-          assessmentType: draft.assessmentType as unknown as
-            | "moba"
-            | "fps"
-            | "strategy"
-            | "all-around"
+          assessmentType: draft.assessmentType.trim()
         });
         void Taro.showToast({ title: "已提交申请", icon: "none" });
         void Taro.navigateTo({
@@ -105,6 +122,8 @@ const WorkerJoinPage = () => {
       }
     })();
   };
+
+  const pickerRange = assessmentOptions.map((item) => item.label);
 
   return (
     <View className="workerJoin">
@@ -191,11 +210,12 @@ const WorkerJoinPage = () => {
             <Text className="workerJoin__label">考核类型</Text>
             <Picker
               mode="selector"
-              range={mockAssessmentOptions.map((item) => item.label)}
-              value={assessmentIndex}
+              range={pickerRange.length > 0 ? pickerRange : ["暂无选项"]}
+              value={pickerRange.length > 0 ? assessmentIndex : 0}
+              disabled={pickerRange.length === 0}
               onChange={(e) => {
                 const index = Number(e.detail.value);
-                const option = mockAssessmentOptions[index];
+                const option = assessmentOptions[index];
                 setDraft((prev) => ({ ...prev, assessmentType: option?.value ?? "" }));
               }}
             >

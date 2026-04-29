@@ -9,6 +9,7 @@ import { AdminAuthService } from "./admin-auth.service";
 import { AdminAuthGuard } from "./admin-auth.guard";
 import { AdminPermissionGuard } from "./admin-permission.guard";
 import { MiniAuthGuard } from "./mini-auth.guard";
+import { WorkerRoleGuard } from "./worker-role.guard";
 
 @Module({
   controllers: [AuthController],
@@ -19,6 +20,7 @@ import { MiniAuthGuard } from "./mini-auth.guard";
     AdminAuthGuard,
     AdminPermissionGuard,
     MiniAuthGuard,
+    WorkerRoleGuard,
     WechatAccessTokenService,
     WechatPhoneService,
     PrismaService
@@ -29,7 +31,9 @@ import { MiniAuthGuard } from "./mini-auth.guard";
     AdminAuthService,
     AdminAuthGuard,
     AdminPermissionGuard,
-    MiniAuthGuard
+    MiniAuthGuard,
+    WorkerRoleGuard,
+    PrismaService
   ]
 })
 export class AuthModule {}

@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { CustomerServiceAgent } from "./customer-service.types";
+import {
+  CustomerServicePresenceStatus,
+  CustomerServiceAgent,
+  MiniCustomerServiceAgentDto
+} from "./customer-service.types";
 
 type ApiEnvelope<T> =
   | { code: 0; message: string; data: T }
@@ -34,6 +38,42 @@ const createAgentId = () => {
 @Injectable()
 export class CustomerServiceService {
   private readonly agents: CustomerServiceAgent[] = [];
+
+  /**
+   * 小程序端可见客服列表：仅未禁用账号；附带 presence（确定性映射，刷新间隙保持稳定）。
+   */
+  public listAgentsForMini(): ApiEnvelope<{ items: MiniCustomerServiceAgentDto[]; total: number }> {
+    const enabled = this.agents.filter((agent) => !agent.disabled);
+    const cycle: CustomerServicePresenceStatus[] = ["online", "busy", "offline"];
+    const labels: Record<CustomerServicePresenceStatus, string> = {
+      online: "在线",
+      busy: "忙碌中",
+      offline: "离线"
+    };
+
+    const items: MiniCustomerServiceAgentDto[] = enabled.map((agent) => {
+      const hash = agent.id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+      const presenceStatus = cycle[Math.abs(hash) % cycle.length];
+      return {
+        id: agent.id,
+        nickname: agent.nickname,
+        wechatId: agent.wechatId,
+        avatarUrl: agent.avatarUrl,
+        wechatQrUrl: agent.wechatQrUrl,
+        presenceStatus,
+        presenceLabel: labels[presenceStatus]
+      };
+    });
+
+    return {
+      code: 0,
+      message: "ok",
+      data: {
+        items,
+        total: items.length
+      }
+    };
+  }
 
   public listAgents(
     filters: ListFilters

@@ -4,6 +4,14 @@ export type WorkerStatus = "active" | "disabled";
 
 export type WorkerAssessmentType = "moba" | "fps" | "strategy" | "all-around";
 
+/** GET /api/mini/worker-join/assessment-options 下发（考核类型可在此统一维护） */
+export type WorkerAssessmentOptionDto = {
+  value: WorkerAssessmentType;
+  label: string;
+  description?: string;
+  disabled?: boolean;
+};
+
 export type WorkerJoinApplication = {
   id: string;
   refNo: string;

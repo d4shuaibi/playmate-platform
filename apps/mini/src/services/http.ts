@@ -18,7 +18,7 @@ type ApiResponse<TData> = {
 };
 
 type RequestOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PATCH";
   body?: unknown;
   /** 为 true 时不带 Authorization（用于登录等接口） */
   skipAuth?: boolean;

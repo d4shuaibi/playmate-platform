@@ -1,19 +1,18 @@
 import { View, Text, ScrollView, Image } from "@tarojs/components";
 import Taro, { useDidShow } from "@tarojs/taro";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
-import { fetchWorkerJoinProgress, logoutMiniUser } from "../../services";
-// import { getRole, getWorkerPermission, setRole } from "../../utils/role";
+import {
+  fetchMiniMe,
+  fetchWorkerJoinProgress,
+  logoutMiniUser,
+  type MiniMePayload
+} from "../../services";
 import { getRole, setRole } from "../../utils/role";
 import { getToken } from "../../utils/session";
 import { LoginModal } from "../../components/login-modal/LoginModal";
-
-type OrderStateItem = {
-  key: string;
-  iconSrc: string;
-  label: string;
-};
+import type { MiniOrderTabCounts } from "../../services/orders";
 
 type MenuItem = {
   key: string;
@@ -31,52 +30,67 @@ import joinIcon from "../../assets/font/入驻.svg";
 import settingIcon from "../../assets/font/系统设置.svg";
 import aboutIcon from "../../assets/font/关于我们.svg";
 
-const mockProfile = {
-  // TODO(backend): 接入用户资料接口，替换昵称/ID/等级/资产标签
-  nickname: "王牌指挥官",
-  userIdLabel: "ID_88291",
-  levelLabel: "LVL45",
-  assetTag: "GOLD"
-};
-
-const mockBalance = {
-  // TODO(backend): 接入钱包接口，替换余额
-  amountText: "¥1,250.00"
-};
-
-const mockOrderStates: OrderStateItem[] = [
-  // TODO(backend): 接入订单统计接口（各状态数量）
-  { key: "pendingPay", iconSrc: pendingPayIcon, label: "待付款" },
-  { key: "pendingTake", iconSrc: pendingTakeIcon, label: "待接单" },
-  { key: "serving", iconSrc: servingIcon, label: "服务中" },
-  { key: "done", iconSrc: doneIcon, label: "待结单" },
-  { key: "refund", iconSrc: refundIcon, label: "退款/售后" }
+/** 订单快捷入口：展示 Tab 数量键与后端 MiniOrderTabCounts 对齐 */
+const ORDER_STATE_DEFS: Array<{
+  key: string;
+  countKey: keyof MiniOrderTabCounts;
+  label: string;
+  iconSrc: string;
+}> = [
+  { key: "pendingPay", countKey: "pendingPay", label: "待付款", iconSrc: pendingPayIcon },
+  { key: "pendingTake", countKey: "pendingTake", label: "待接单", iconSrc: pendingTakeIcon },
+  { key: "serving", countKey: "serving", label: "服务中", iconSrc: servingIcon },
+  { key: "pendingDone", countKey: "pendingDone", label: "待结单", iconSrc: doneIcon },
+  { key: "refundAfterSale", countKey: "refundAfterSale", label: "退款/售后", iconSrc: refundIcon }
 ];
 
-const mockMenus: MenuItem[] = [
-  // TODO(backend): 接入运营配置/导航配置接口
+/** 菜单仍为本地静态配置（运营配置可后置接入） */
+const STATIC_MENUS: MenuItem[] = [
   { key: "benefit", iconSrc: benefitIcon, label: "福利活动" },
   { key: "join", iconSrc: joinIcon, label: "打手入驻" },
   { key: "setting", iconSrc: settingIcon, label: "系统设置" },
   { key: "about", iconSrc: aboutIcon, label: "关于我们" }
 ];
 
+/**
+ * 余额展示（元）
+ */
+const formatBalanceText = (amount: number): string =>
+  `¥${amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 const MePage = () => {
   const [role, setCurrentRole] = useState(() => getRole());
   const [loggedIn, setLoggedIn] = useState(() => Boolean(getToken()));
   const [loginOpen, setLoginOpen] = useState(false);
+  const [meData, setMeData] = useState<MiniMePayload | null>(null);
+
+  const loadMe = useCallback(async () => {
+    if (!getToken()) {
+      setMeData(null);
+      return;
+    }
+    try {
+      const data = await fetchMiniMe();
+      setMeData(data);
+    } catch {
+      setMeData(null);
+    }
+  }, []);
 
   useDidShow(() => {
     const nextLoggedIn = Boolean(getToken());
     const nextRole = getRole();
     setLoggedIn((prev) => (prev === nextLoggedIn ? prev : nextLoggedIn));
     setCurrentRole((prev) => (prev === nextRole ? prev : nextRole));
+    if (nextLoggedIn) void loadMe();
+    else setMeData(null);
   });
 
   const handleLogout = () => {
     logoutMiniUser();
     setLoggedIn(false);
     setCurrentRole("user");
+    setMeData(null);
     void Taro.showToast({ title: "已退出登录", icon: "none" });
   };
 
@@ -91,7 +105,6 @@ const MePage = () => {
       setLoginOpen(true);
       return;
     }
-    // 预留：后续若要按服务端权限控制，这里改为 getWorkerPermission() 再允许切换
     setRole("worker");
     setCurrentRole("worker");
     void Taro.redirectTo({ url: "/pages/home-worker/index" });
@@ -105,9 +118,18 @@ const MePage = () => {
     void Taro.showToast({ title: `${label}功能开发中`, icon: "none" });
   };
 
+  const handleOpenOrders = () => {
+    if (!loggedIn) {
+      setLoginOpen(true);
+      return;
+    }
+    void Taro.navigateTo({ url: "/pages/orders/index" });
+  };
+
   const handleOpenCustomerService = () => {
-    // TODO(backend): 可传递用户身份与会话上下文，接入真实客服系统
-    void Taro.navigateTo({ url: "/pages/customer-service/index?from=me" });
+    void Taro.navigateTo({
+      url: `/pages/customer-service/index?from=me&role=${encodeURIComponent(role)}`
+    });
   };
 
   const handleOpenWorkerJoin = () => {
@@ -142,23 +164,35 @@ const MePage = () => {
     handleFeatureClick(menu.label);
   };
 
+  const avatarUrl = meData?.avatarUrl?.trim();
+  const nickname = loggedIn ? (meData?.nickname ?? "微信用户") : "未登录";
+  const displayId = loggedIn ? (meData?.displayId ?? "") : "";
+  const balanceText = loggedIn && meData ? formatBalanceText(meData.walletBalance) : "—";
+  const counts = meData?.orderCounts;
+
   return (
     <View className="mePage">
       <ScrollView className="mePage__scroll" scrollY enhanced showScrollbar={false}>
         <View className="mePage__profileCard">
           <View className="mePage__avatarWrap">
             <View className="mePage__avatar">
-              <Text className="mePage__avatarText">👤</Text>
+              {loggedIn && avatarUrl ? (
+                <Image
+                  className="mePage__avatarImg"
+                  src={avatarUrl}
+                  mode="aspectFill"
+                  aria-label="头像"
+                />
+              ) : (
+                <Text className="mePage__avatarText">👤</Text>
+              )}
             </View>
           </View>
           <View className="mePage__profileMain">
-            <Text className="mePage__nickname">{loggedIn ? mockProfile.nickname : "未登录"}</Text>
+            <Text className="mePage__nickname">{nickname}</Text>
             {loggedIn ? (
               <View className="mePage__profileMetaRow">
-                <Text className="mePage__profileMeta">{mockProfile.userIdLabel}</Text>
-                <Text className="mePage__profileMeta mePage__profileMeta--level">
-                  {mockProfile.levelLabel}
-                </Text>
+                <Text className="mePage__profileMeta">{displayId}</Text>
               </View>
             ) : (
               <View
@@ -170,11 +204,6 @@ const MePage = () => {
               </View>
             )}
           </View>
-          {loggedIn ? (
-            <View className="mePage__assetTag">
-              <Text className="mePage__assetTagText">{mockProfile.assetTag}</Text>
-            </View>
-          ) : null}
         </View>
 
         <View className="mePage__switchCard">
@@ -195,7 +224,7 @@ const MePage = () => {
         <View className="mePage__balanceCard">
           <View className="mePage__balanceLeft">
             <Text className="mePage__balanceLabel">可用余额</Text>
-            <Text className="mePage__balanceAmount">{loggedIn ? mockBalance.amountText : "—"}</Text>
+            <Text className="mePage__balanceAmount">{balanceText}</Text>
           </View>
           <View
             className="mePage__balanceAction"
@@ -207,33 +236,46 @@ const MePage = () => {
         </View>
 
         <View className="mePage__sectionCard">
-          <View className="mePage__sectionHeader">
+          <View
+            className="mePage__sectionHeader"
+            onClick={handleOpenOrders}
+            aria-label="查看订单列表"
+          >
             <Text className="mePage__sectionTitle">订单状态</Text>
             <Text className="mePage__sectionArrow">›</Text>
           </View>
           <View className="mePage__stateRow">
-            {mockOrderStates.map((item) => (
-              <View
-                key={item.key}
-                className="mePage__stateItem"
-                onClick={() => handleFeatureClick(item.label)}
-              >
-                <View className="mePage__stateIconWrap">
-                  <Image
-                    className="mePage__stateIcon"
-                    src={item.iconSrc}
-                    mode="aspectFit"
-                    aria-label={`${item.label}图标`}
-                  />
+            {ORDER_STATE_DEFS.map((item) => {
+              const n = counts?.[item.countKey] ?? 0;
+              return (
+                <View
+                  key={item.key}
+                  className="mePage__stateItem"
+                  onClick={() => handleOpenOrders()}
+                  aria-label={`${item.label}${n > 0 ? ` ${n} 笔` : ""}`}
+                >
+                  <View className="mePage__stateIconWrap">
+                    <Image
+                      className="mePage__stateIcon"
+                      src={item.iconSrc}
+                      mode="aspectFit"
+                      aria-hidden
+                    />
+                    {n > 0 ? (
+                      <View className="mePage__stateBadge">
+                        <Text className="mePage__stateBadgeText">{n > 99 ? "99+" : n}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text className="mePage__stateLabel">{item.label}</Text>
                 </View>
-                <Text className="mePage__stateLabel">{item.label}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 
         <View className="mePage__sectionCard">
-          {mockMenus.map((menu) => (
+          {STATIC_MENUS.map((menu) => (
             <View key={menu.key} className="mePage__menuRow" onClick={() => handleMenuClick(menu)}>
               <View className="mePage__menuLeft">
                 <Image
@@ -271,6 +313,7 @@ const MePage = () => {
         onLoginSuccess={() => {
           setLoggedIn(true);
           setCurrentRole(getRole());
+          void loadMe();
         }}
       />
     </View>

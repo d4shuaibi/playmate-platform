@@ -1,49 +1,86 @@
 import { View, Text, ScrollView, Image } from "@tarojs/components";
 import Taro, { useRouter } from "@tarojs/taro";
+import { useCallback, useEffect, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
-import { getRole, setRole } from "../../utils/role";
+import { getRole } from "../../utils/role";
+import { fetchWorkerIncomeDetail, type WorkerIncomeDetail } from "../../services/worker-income";
 
-type WorkerIncomeDetailData = {
-  id: string;
-  amountText: string;
-  settleStateText: string;
-  orderNo: string;
-  serviceType: string;
-  completedAt: string;
-  settleNote: string;
-  coverImage: string;
+const BOSS_STATUS_LABEL: Record<string, string> = {
+  pendingPay: "待付款",
+  pendingTake: "待接单",
+  serving: "服务中",
+  pendingDone: "待结单",
+  done: "已完成",
+  cancelled: "已取消"
 };
 
-// TODO(backend): 接入单条收益详情接口（按 recordId 返回金额、状态、订单与结算说明）
-const mockIncomeDetail: WorkerIncomeDetailData = {
-  id: "hist-5",
-  amountText: "+¥120.00",
-  settleStateText: "结算成功",
-  orderNo: "ORD-20240523-9981",
-  serviceType: "绝密保底带出",
-  completedAt: "2024-05-23 14:30:22",
-  settleNote: "工资将由财务月结后统一发放到银行卡或微信。如有疑问，请及时联系您的专属派单专员。",
-  coverImage:
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuCjMMjMZ2dQLo_8g0j_rrHnwdEaO-tHSED9oKt0BCQpqb1IcQ7Ub2TvmzCfcc9fdidasMHIvRT8KTCVe4M97DmZEhJJvQxSMdc1li4pfzE0VGD1AzHkhvsE5X2ciJ89wQgpES6O3lg9vP1U2h6YVeVDVVy3aZPOkZBzRvPRz3wNqyDslRGgfegaFkPe_tu-uOos9xviyve7xH2cZ5M7eM8dps2q8XwoC-iQ1J0BSXB2vYySG14g4TDWph8b0qDdBSEUBtWz5OJoAkk"
-};
+const formatMoney = (n: number): string =>
+  `¥ ${n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const WorkerIncomeDetailPage = () => {
   const role = getRole();
   const router = useRouter();
-  const recordId = String(router.params?.id ?? "");
+  const orderId = String(router.params?.id ?? "").trim();
+
+  const [detail, setDetail] = useState<WorkerIncomeDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadDetail = useCallback(async () => {
+    if (!orderId) {
+      setDetail(null);
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const data = await fetchWorkerIncomeDetail(orderId);
+      setDetail(data);
+    } catch (error: unknown) {
+      setDetail(null);
+      void Taro.showToast({
+        title: error instanceof Error ? error.message : "加载失败",
+        icon: "none"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId]);
+
+  useEffect(() => {
+    void loadDetail();
+  }, [loadDetail]);
+
+  const handleContactDispatcher = () => {
+    const idParam = orderId || detail?.orderId || "";
+    void Taro.navigateTo({
+      url: `/pages/customer-service/index?from=worker-income-detail&id=${encodeURIComponent(idParam)}`
+    });
+  };
 
   if (role !== "worker") {
-    setRole("user");
     void Taro.showToast({ title: "仅打手可查看收益详情", icon: "none" });
     void Taro.redirectTo({ url: "/pages/home-user/index" });
     return <View className="workerIncomeDetail" />;
   }
 
-  const handleContactDispatcher = () => {
-    // TODO(backend): 按 recordId 打开派单员会话/工单
-    void Taro.showToast({ title: `联系派单员（${recordId || "mock"}）`, icon: "none" });
-  };
+  if (!orderId) {
+    return (
+      <View className="workerIncomeDetail">
+        <Text className="workerIncomeDetail__hint">缺少流水标识</Text>
+      </View>
+    );
+  }
+
+  if (loading || !detail) {
+    return (
+      <View className="workerIncomeDetail">
+        <Text className="workerIncomeDetail__hint">{loading ? "加载中…" : "记录不存在"}</Text>
+      </View>
+    );
+  }
+
+  const heroAmountText = `+ ${formatMoney(detail.workerIncomeAmount)}`;
 
   return (
     <View className="workerIncomeDetail">
@@ -52,24 +89,50 @@ const WorkerIncomeDetailPage = () => {
           <View className="workerIncomeDetail__heroIconWrap">
             <Text className="workerIncomeDetail__heroIcon">✓</Text>
           </View>
-          <Text className="workerIncomeDetail__heroAmount">{mockIncomeDetail.amountText}</Text>
-          <Text className="workerIncomeDetail__heroState">{mockIncomeDetail.settleStateText}</Text>
+          <Text className="workerIncomeDetail__heroAmount">{heroAmountText}</Text>
+          <Text className="workerIncomeDetail__heroState">{detail.settlementStatusLabel}</Text>
+          <Text className="workerIncomeDetail__heroMeta">关联订单 {detail.orderNo}</Text>
         </View>
 
         <View className="workerIncomeDetail__section workerIncomeDetail__orderCard">
           <View className="workerIncomeDetail__kvRow">
             <Text className="workerIncomeDetail__kvKey">订单编号</Text>
-            <Text className="workerIncomeDetail__kvValue">{mockIncomeDetail.orderNo}</Text>
+            <Text className="workerIncomeDetail__kvValue">{detail.orderNo}</Text>
           </View>
           <View className="workerIncomeDetail__kvRow">
-            <Text className="workerIncomeDetail__kvKey">服务类型</Text>
+            <Text className="workerIncomeDetail__kvKey">服务内容</Text>
             <Text className="workerIncomeDetail__kvValue workerIncomeDetail__kvValue--strong">
-              {mockIncomeDetail.serviceType}
+              {detail.serviceTitle}
             </Text>
           </View>
           <View className="workerIncomeDetail__kvRow">
-            <Text className="workerIncomeDetail__kvKey">完成时间</Text>
-            <Text className="workerIncomeDetail__kvValue">{mockIncomeDetail.completedAt}</Text>
+            <Text className="workerIncomeDetail__kvKey">套餐标签</Text>
+            <Text className="workerIncomeDetail__kvValue">{detail.packageTag}</Text>
+          </View>
+          <View className="workerIncomeDetail__kvRow">
+            <Text className="workerIncomeDetail__kvKey">老板端订单状态</Text>
+            <Text className="workerIncomeDetail__kvValue">
+              {BOSS_STATUS_LABEL[detail.bossOrderStatus] ?? detail.bossOrderStatus}
+            </Text>
+          </View>
+          <View className="workerIncomeDetail__kvRow">
+            <Text className="workerIncomeDetail__kvKey">结算状态</Text>
+            <Text className="workerIncomeDetail__kvValue">{detail.settlementStatusLabel}</Text>
+          </View>
+          <View className="workerIncomeDetail__kvRow">
+            <Text className="workerIncomeDetail__kvKey">完成 / 结单时间</Text>
+            <Text className="workerIncomeDetail__kvValue">
+              {detail.completedAtDisplay ??
+                detail.assignedAtDisplay ??
+                detail.createdAtDisplay ??
+                "—"}
+            </Text>
+          </View>
+          <View className="workerIncomeDetail__kvRow">
+            <Text className="workerIncomeDetail__kvKey">分成金额（测算）</Text>
+            <Text className="workerIncomeDetail__kvValue">
+              {formatMoney(detail.workerIncomeAmount)}
+            </Text>
           </View>
         </View>
 
@@ -78,27 +141,23 @@ const WorkerIncomeDetailPage = () => {
             <Text className="workerIncomeDetail__noteIcon">ⓘ</Text>
             <Text className="workerIncomeDetail__noteTitle">结算说明</Text>
           </View>
-          <Text className="workerIncomeDetail__noteDesc">{mockIncomeDetail.settleNote}</Text>
+          <Text className="workerIncomeDetail__noteDesc">{detail.settleNote}</Text>
         </View>
 
         <View className="workerIncomeDetail__posterWrap">
-          <Image
-            className="workerIncomeDetail__poster"
-            src={mockIncomeDetail.coverImage}
-            mode="aspectFill"
-          />
+          <Image className="workerIncomeDetail__poster" src={detail.coverImage} mode="aspectFill" />
           <View className="workerIncomeDetail__posterMask" />
-          <Text className="workerIncomeDetail__posterTag">Elite Command Center</Text>
+          <Text className="workerIncomeDetail__posterTag">Income Ledger</Text>
         </View>
 
         <View className="workerIncomeDetail__actionWrap">
           <View
             className="workerIncomeDetail__actionBtn"
             onClick={handleContactDispatcher}
-            aria-label="联系派单员"
+            aria-label="联系客服"
           >
             <Text className="workerIncomeDetail__actionBtnIcon">🎧</Text>
-            <Text className="workerIncomeDetail__actionBtnText">联系派单员</Text>
+            <Text className="workerIncomeDetail__actionBtnText">联系客服</Text>
           </View>
         </View>
       </ScrollView>

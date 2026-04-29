@@ -67,6 +67,14 @@
   color: #4edea3;
 }
 
+.workerIncomeHistory__heroSub {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(203, 195, 215, 0.72);
+  display: block;
+}
+
 .workerIncomeHistory__heroStats {
   margin-top: 14px;
   padding-top: 12px;
@@ -98,6 +106,41 @@
 .workerIncomeHistory__sectionTitle {
   font-size: 18px;
   font-weight: 900;
+}
+
+.workerIncomeHistory__monthSwitch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workerIncomeHistory__monthBtn {
+  width: 32px;
+  height: 28px;
+  border-radius: 10px;
+  background: rgba(51, 53, 55, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workerIncomeHistory__monthBtn--disabled {
+  opacity: 0.32;
+  pointer-events: none;
+}
+
+.workerIncomeHistory__monthBtnText {
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(226, 226, 229, 0.9);
+}
+
+.workerIncomeHistory__monthText {
+  min-width: 86px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
 }
 
 .workerIncomeHistory__filter {
@@ -205,4 +248,24 @@
 .workerIncomeHistory__state--pending {
   color: #d0bcff;
   background: rgba(208, 188, 255, 0.12);
+}
+
+.workerIncomeHistory__loading {
+  padding: 18px 16px;
+  text-align: center;
+}
+
+.workerIncomeHistory__loadingText {
+  font-size: 13px;
+  color: rgba(203, 195, 215, 0.52);
+}
+
+.workerIncomeHistory__endHint {
+  padding: 8px 16px 28px;
+  text-align: center;
+}
+
+.workerIncomeHistory__endHintText {
+  font-size: 11px;
+  color: rgba(203, 195, 215, 0.42);
 }

@@ -342,3 +342,26 @@
   font-weight: 900;
   color: #121416;
 }
+
+.workerOrderDetail__primaryBtn--muted {
+  opacity: 0.42;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.workerOrderDetail__primaryBtn--muted .workerOrderDetail__primaryBtnText {
+  color: rgba(226, 226, 229, 0.9);
+}
+
+.workerOrderDetail__hint {
+  padding: 48px 24px;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(226, 226, 229, 0.55);
+}
+
+.workerOrderDetail__hintInline {
+  font-size: 13px;
+  color: rgba(149, 142, 160, 0.85);
+  padding: 4px 2px 8px;
+}

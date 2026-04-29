@@ -26,6 +26,8 @@ model User {
 
   nickname  String?
   avatarUrl String?
+  /// 小程序钱包可用余额（业务演示字段）
+  walletBalance Decimal @default(0) @db.Decimal(12, 2)
   /// 微信 phonenumber.getPhoneNumber 换取的手机号（含区号等，与微信返回一致）
   phone     String? @unique
 

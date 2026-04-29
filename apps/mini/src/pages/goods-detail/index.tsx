@@ -3,6 +3,8 @@ import Taro from "@tarojs/taro";
 import { useEffect, useMemo, useState } from "react";
 import "./index.scss";
 import { fetchMiniProductDetail } from "../../services/products";
+import { createMiniOrder } from "../../services/orders";
+import { getToken } from "../../utils/session";
 
 const GoodsDetailPage = () => {
   const router = useMemo(() => Taro.getCurrentInstance().router, []);
@@ -55,13 +57,31 @@ const GoodsDetailPage = () => {
   };
 
   const handleContactService = () => {
-    // TODO(backend): 可追加商品ID参数，用于客服侧定位咨询商品
-    void Taro.navigateTo({ url: "/pages/customer-service/index?from=goods-detail" });
+    void Taro.navigateTo({
+      url: `/pages/customer-service/index?from=goods-detail&id=${encodeURIComponent(productId)}`
+    });
   };
 
-  const handlePlaceOrder = () => {
-    // TODO(backend): 接入下单接口（套餐、数量、支付）
-    void Taro.showToast({ title: "立即下单（Mock）", icon: "none" });
+  const handlePlaceOrder = async () => {
+    if (!getToken()) {
+      void Taro.showToast({ title: "请先登录", icon: "none" });
+      return;
+    }
+    if (!productId) {
+      void Taro.showToast({ title: "缺少商品信息", icon: "none" });
+      return;
+    }
+    try {
+      const order = await createMiniOrder(productId);
+      void Taro.navigateTo({
+        url: `/pages/order-detail/index?id=${encodeURIComponent(order.id)}`
+      });
+    } catch (error: unknown) {
+      void Taro.showToast({
+        title: error instanceof Error ? error.message : "下单失败",
+        icon: "none"
+      });
+    }
   };
 
   if (loading || !detail) {

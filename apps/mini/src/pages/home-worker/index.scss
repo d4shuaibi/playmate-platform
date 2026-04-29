@@ -435,3 +435,28 @@
   font-weight: 800;
 }
 
+.workerCommand__onlineBadge--rest .workerCommand__onlineDot {
+  background: rgba(149, 142, 160, 0.85);
+  box-shadow: none;
+}
+
+.workerCommand__loadingHint {
+  padding: 8px 0 14px;
+  text-align: center;
+}
+
+.workerCommand__loadingHintText {
+  font-size: 13px;
+  color: rgba(226, 226, 229, 0.45);
+}
+
+.workerCommand__emptyPool {
+  padding: 18px 8px 8px;
+  text-align: center;
+}
+
+.workerCommand__emptyPoolText {
+  font-size: 13px;
+  color: rgba(226, 226, 229, 0.42);
+}
+
