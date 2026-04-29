@@ -58,6 +58,16 @@ export class MiniOrderController {
   }
 
   /**
+   * POST /api/mini/orders/:id/wechat-prepay  微信支付 JSAPI 预下单并生成调起参数（待付款订单）
+   */
+  @Post(":id/wechat-prepay")
+  async wechatPrepay(@Req() req: RequestWithMini, @Param("id") orderId: string) {
+    const userId = req.miniAuth?.sub;
+    if (!userId) throw new UnauthorizedException();
+    return this.orderService.requestMiniOrderWechatPrepay(userId, orderId);
+  }
+
+  /**
    * GET /api/mini/orders/:id
    */
   @Get(":id")

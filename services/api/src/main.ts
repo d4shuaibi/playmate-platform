@@ -5,7 +5,9 @@ import { AppModule } from "./modules/app/app.module";
 import { getAppConfig } from "./modules/app/config";
 
 const bootstrap = async () => {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true
+  });
 
   /** 本地 / H5 / 微信开发者工具联调：允许跨域与常见头（含 Authorization） */
   app.enableCors({

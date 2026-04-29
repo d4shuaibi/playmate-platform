@@ -47,6 +47,8 @@ export type Order = {
   assignedAt: string;
   /** 订单完成时间 ISO8601（老板确认结单后）；未完成为空串 */
   completedAt: string;
+  /** 微信支付成功后的微信订单号（展示/对账） */
+  wxTransactionId?: string;
 };
 
 /** 打手端订单 Tab：进行中（含待验收） / 已完成 */

@@ -388,6 +388,27 @@
   border-top-right-radius: 22px;
 }
 
+.orderDetail__payBtnWrap {
+  padding: 0 16px 10px;
+  box-sizing: border-box;
+}
+
+.orderDetail__payBtn {
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #07c160 0%, #06ae56 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orderDetail__payBtnText {
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
 .orderDetail__confirmCloseBtn {
   margin: 0 16px 10px;
   height: 48px;

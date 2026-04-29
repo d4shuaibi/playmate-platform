@@ -46,6 +46,8 @@ export type MiniOrder = {
   assignedWorkerId: string;
   assignedAt: string;
   completedAt: string;
+  /** 微信支付单号（若有） */
+  wxTransactionId?: string;
 };
 
 export type MiniOrderTabCounts = {
@@ -123,6 +125,31 @@ export const requestMiniOrderRefund = async (orderId: string): Promise<{ success
 export const confirmMiniOrderClose = async (orderId: string): Promise<MiniOrder> => {
   const res = await request<MiniOrder>(
     `${apiPaths.miniOrders}/${encodeURIComponent(orderId)}/confirm-close`,
+    { method: "POST" }
+  );
+  return res.data;
+};
+
+/** POST /api/mini/orders/:id/wechat-prepay */
+export type MiniWechatPrepayResult =
+  | { mockPaid: true }
+  | {
+      mockPaid: false;
+      payment: {
+        timeStamp: string;
+        nonceStr: string;
+        package: string;
+        signType: "RSA";
+        paySign: string;
+      };
+    };
+
+/**
+ * 微信支付预下单：未配置商户或 WECHAT_PAY_DEV_SIMULATE 时为模拟支付成功。
+ */
+export const requestMiniWechatPrepay = async (orderId: string): Promise<MiniWechatPrepayResult> => {
+  const res = await request<MiniWechatPrepayResult>(
+    `${apiPaths.miniOrders}/${encodeURIComponent(orderId)}/wechat-prepay`,
     { method: "POST" }
   );
   return res.data;

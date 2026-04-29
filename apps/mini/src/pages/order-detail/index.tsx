@@ -6,6 +6,7 @@ import {
   confirmMiniOrderClose,
   fetchMiniOrderDetail,
   requestMiniOrderRefund,
+  requestMiniWechatPrepay,
   type MiniOrder,
   type MiniOrderStatus,
   type MiniRefundStatus
@@ -176,6 +177,41 @@ const OrderDetailPage = () => {
     }
   };
 
+  /** 微信支付：服务端 JSAPI 下单 + 小程序 requestPayment（见微信支付商户文档） */
+  const handleWechatPay = async () => {
+    if (!detail || detail.status !== "pendingPay") return;
+    try {
+      const prepay = await requestMiniWechatPrepay(detail.id);
+      if (prepay.mockPaid) {
+        void Taro.showToast({ title: "支付成功", icon: "success" });
+        await loadDetail();
+        return;
+      }
+      await Taro.requestPayment({
+        timeStamp: prepay.payment.timeStamp,
+        nonceStr: prepay.payment.nonceStr,
+        package: prepay.payment.package,
+        signType: prepay.payment.signType,
+        paySign: prepay.payment.paySign
+      });
+      void Taro.showToast({ title: "支付完成", icon: "success" });
+      await loadDetail();
+    } catch (error: unknown) {
+      const errMsg =
+        typeof error === "object" && error !== null && "errMsg" in error
+          ? String((error as { errMsg?: string }).errMsg ?? "")
+          : error instanceof Error
+            ? error.message
+            : "";
+      const cancelled =
+        errMsg.includes("cancel") || errMsg.includes("取消") || errMsg.includes("fail cancel");
+      void Taro.showToast({
+        title: cancelled ? "已取消支付" : error instanceof Error ? error.message : "支付失败",
+        icon: "none"
+      });
+    }
+  };
+
   if (!orderId) {
     return (
       <View className="orderDetail">
@@ -319,6 +355,18 @@ const OrderDetailPage = () => {
       </ScrollView>
 
       <View className="orderDetail__footerDock">
+        {detail.status === "pendingPay" ? (
+          <View className="orderDetail__payBtnWrap">
+            <View
+              className="orderDetail__payBtn"
+              onClick={() => void handleWechatPay()}
+              aria-label="微信支付"
+            >
+              <Text className="orderDetail__payBtnText">微信支付</Text>
+            </View>
+          </View>
+        ) : null}
+
         {detail.status === "pendingDone" ? (
           <View
             className="orderDetail__confirmCloseBtn"

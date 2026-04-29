@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { randomBytes } from "crypto";
+import { PrismaService } from "../../prisma/prisma.service";
 import { ProductService } from "../product/product.service";
 import {
   MiniOrderTabCounts,
@@ -10,6 +11,8 @@ import {
   WorkerOrderStage,
   WorkerOrderTabCounts
 } from "./order.types";
+import type { MiniProgramPaymentParams } from "./wechat-pay.service";
+import { WechatPayService } from "./wechat-pay.service";
 
 type ApiEnvelope<T> =
   | { code: 0; message: string; data: T }
@@ -28,6 +31,11 @@ type MiniListFilters = {
   page?: number;
   pageSize?: number;
 };
+
+/** POST /api/mini/orders/:id/wechat-prepay */
+export type MiniWechatPrepayData =
+  | { mockPaid: true }
+  | { mockPaid: false; payment: MiniProgramPaymentParams };
 
 type WorkerListFilters = {
   bucket?: WorkerOrderBucket;
@@ -159,7 +167,11 @@ const buildWorkerTabCounts = (orders: Order[], workerId: string): WorkerOrderTab
 export class OrderService {
   private readonly orders: Order[] = [];
 
-  constructor(private readonly productService: ProductService) {
+  constructor(
+    private readonly productService: ProductService,
+    private readonly prisma: PrismaService,
+    private readonly wechatPayService: WechatPayService
+  ) {
     const allowSeed = process.env.SEED_DEMO === "true" || process.env.NODE_ENV !== "production";
     if (!allowSeed) return;
 
@@ -604,6 +616,75 @@ export class OrderService {
     }
 
     return counts;
+  }
+
+  /**
+   * 微信支付回调或本地模拟：待付款 → 待接单。
+   */
+  public markMiniOrderPaidFromNotify(outTradeNo: string, wxTransactionId?: string): boolean {
+    const idx = this.orders.findIndex((o) => o.id === outTradeNo);
+    if (idx < 0) return false;
+    const found = this.orders[idx];
+    if (found.status !== "pendingPay") return true;
+    const next: Order = {
+      ...found,
+      status: "pendingTake",
+      paidAmount: found.amount,
+      payMethod: "微信支付",
+      progress: buildProgress("pendingTake"),
+      wxTransactionId: wxTransactionId ?? found.wxTransactionId
+    };
+    this.orders[idx] = next;
+    return true;
+  }
+
+  /**
+   * 小程序 JSAPI 预下单并生成调起参数；未配置商户或开启 WECHAT_PAY_DEV_SIMULATE 时直接标记已支付。
+   */
+  public async requestMiniOrderWechatPrepay(
+    userId: string,
+    orderId: string
+  ): Promise<ApiEnvelope<MiniWechatPrepayData>> {
+    const found = this.orders.find((item) => item.id === orderId) ?? null;
+    if (!found) return { code: 404, message: "order not found", data: null };
+    if (found.userId !== userId) return { code: 403, message: "forbidden", data: null };
+    if (found.status !== "pendingPay") {
+      return { code: 400, message: "订单状态不可支付", data: null };
+    }
+
+    if (this.wechatPayService.shouldSimulateImmediatePay()) {
+      this.markMiniOrderPaidFromNotify(found.id, "SIMULATED");
+      return { code: 0, message: "ok", data: { mockPaid: true } };
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { wechatOpenId: true }
+    });
+    const openid = user?.wechatOpenId?.trim() ?? "";
+    if (!openid) {
+      return {
+        code: 400,
+        message: "未绑定微信用户标识：请使用微信小程序登录后再支付",
+        data: null
+      };
+    }
+
+    const amountFen = Math.max(1, Math.round(found.amount * 100));
+
+    try {
+      const { prepayId } = await this.wechatPayService.jsapiCreateOrder({
+        outTradeNo: found.id,
+        description: found.serviceTitle,
+        amountFen,
+        payerOpenId: openid
+      });
+      const payment = this.wechatPayService.buildMiniProgramPaymentParams(prepayId);
+      return { code: 0, message: "ok", data: { mockPaid: false, payment } };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return { code: 502, message: msg, data: null };
+    }
   }
 
   /** 分配给指定打手的订单（用于收益结算聚合） */

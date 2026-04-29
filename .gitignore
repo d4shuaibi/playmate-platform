@@ -16,3 +16,6 @@ apps/mini/project.private.config.json
 
 # API build output
 services/api/dist/
+
+# 微信支付公钥 PEM（本地路径勿提交仓库）
+services/api/certs/*.pem
