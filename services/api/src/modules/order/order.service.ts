@@ -1,10 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { randomBytes } from "crypto";
+import type { BizOrder, Prisma } from "@prisma/client";
+import { BizOrderStatus, BizRefundStatus } from "@prisma/client";
+import { decimalLikeToNumber } from "../../lib/decimal-like";
 import { PrismaService } from "../../prisma/prisma.service";
 import { ProductService } from "../product/product.service";
 import {
   MiniOrderTabCounts,
   Order,
+  OrderDeliveryItem,
   OrderStatus,
   RefundStatus,
   WorkerOrderBucket,
@@ -43,7 +47,7 @@ type WorkerListFilters = {
   pageSize?: number;
 };
 
-const normalizeKeyword = (value: string | undefined) => {
+const normalizeKeyword = (value: string | undefined): string => {
   return (value ?? "").trim().toLowerCase();
 };
 
@@ -84,9 +88,8 @@ const buildProgress = (status: OrderStatus) => {
   }));
 };
 
-/** 新建订单展示用下单时间 */
-const formatCreatedAt = (): string => {
-  const d = new Date();
+/** 下单时间展示 */
+const formatCreatedAtFromDate = (d: Date): string => {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
@@ -109,6 +112,55 @@ const yesterdayUtcPrefix = (): string => {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - 1);
   return utcDatePrefix(d);
+};
+
+const toOrderStatus = (s: BizOrderStatus): OrderStatus => s as OrderStatus;
+
+const toRefundStatus = (s: BizRefundStatus): RefundStatus => s as RefundStatus;
+
+const toBizOrderStatus = (s: OrderStatus): BizOrderStatus => s as BizOrderStatus;
+
+/** 解析交付项 JSON */
+const parseDeliveries = (raw: Prisma.JsonValue): OrderDeliveryItem[] => {
+  if (!Array.isArray(raw)) return [];
+  const out: OrderDeliveryItem[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as { id?: unknown; text?: unknown; done?: unknown };
+    const id = typeof o.id === "string" ? o.id : "";
+    const text = typeof o.text === "string" ? o.text : "";
+    const done = Boolean(o.done);
+    if (!id || !text) continue;
+    out.push({ id, text, done });
+  }
+  return out;
+};
+
+const mapRowToOrder = (row: BizOrder): Order => {
+  const status = toOrderStatus(row.status);
+  return {
+    id: row.id,
+    orderNo: row.orderNo,
+    status,
+    packageTag: row.packageTag,
+    serviceTitle: row.serviceTitle,
+    amount: decimalLikeToNumber(row.amount),
+    quantityText: row.quantityText,
+    coverImage: row.coverImage,
+    createdAt: formatCreatedAtFromDate(row.createdAt),
+    payMethod: row.payMethod,
+    paidAmount: decimalLikeToNumber(row.paidAmount),
+    progress: buildProgress(status),
+    deliveries: parseDeliveries(row.deliveries),
+    createdBy: row.createdBy,
+    userId: row.userId ?? "",
+    productId: row.productId ?? "",
+    refundStatus: toRefundStatus(row.refundStatus),
+    assignedWorkerId: row.assignedWorkerId ?? "",
+    assignedAt: row.assignedAt,
+    completedAt: row.completedAt,
+    wxTransactionId: row.wxTransactionId ?? undefined
+  };
 };
 
 /** 打手侧订单阶段（pool=待_pool 接单；老板端 pendingTake 且无分配） */
@@ -163,155 +215,130 @@ const buildWorkerTabCounts = (orders: Order[], workerId: string): WorkerOrderTab
   };
 };
 
+const orderStatusesMatchingLabelKeyword = (keyword: string): BizOrderStatus[] => {
+  if (!keyword.trim()) return [];
+  const k = keyword.toLowerCase();
+  return (Object.entries(STATUS_LABEL_MAP) as [OrderStatus, string][])
+    .filter(([, lbl]) => lbl.toLowerCase().includes(k))
+    .map(([s]) => toBizOrderStatus(s));
+};
+
 @Injectable()
 export class OrderService {
-  private readonly orders: Order[] = [];
-
   constructor(
     private readonly productService: ProductService,
     private readonly prisma: PrismaService,
     private readonly wechatPayService: WechatPayService
-  ) {
-    const allowSeed = process.env.SEED_DEMO === "true" || process.env.NODE_ENV !== "production";
-    if (!allowSeed) return;
-
-    this.orders.push(
-      {
-        id: "o1",
-        orderNo: "ORD-8829-X",
-        status: "pendingTake",
-        packageTag: "至尊服务",
-        serviceTitle: "暗区突围：全地图红卡带出",
-        amount: 2899,
-        quantityText: "× 1 套服务",
-        coverImage:
-          "https://lh3.googleusercontent.com/aida-public/AB6AXuDYi_2hfQ_QdmpZ6R0mEIRmCWANryQA3XfuFHRAshY17FNjeqygj4SItHwCbhseAOQYktoTId8sfzwAndrUsafJXNXzp30xQMB3VMxOeDcysbav0fMG1fXmLNFfkZaH__ly4KkLomU6q3tN0ljl3kdV44q7QkW67QmQuLbkDEPovMEWPHTu7yT_Vwbk2-9GgOhOSorTrrv1cCSqxCZMw-Dc06d256Yzx6naV6K9vwg1-JsOA9OehopSCDGbkvn_r9ZrGpV3o0XskdA",
-        createdAt: "2023.11.24 14:30",
-        payMethod: "极氪代币支付",
-        paidAmount: 2899,
-        progress: buildProgress("pendingTake"),
-        deliveries: [
-          { id: "d1", text: "绝密红卡 (400-1000万价值)", done: false },
-          { id: "d2", text: "全套满配装备 & 弹药补给", done: false },
-          { id: "d3", text: "角色技能等级经验提升", done: false }
-        ],
-        createdBy: "seed",
-        userId: "",
-        productId: "",
-        refundStatus: "none",
-        assignedWorkerId: "",
-        assignedAt: "",
-        completedAt: ""
-      },
-      {
-        id: "o2",
-        orderNo: "ORD-7741-K",
-        status: "pendingPay",
-        packageTag: "标准套餐",
-        serviceTitle: "使命召唤：现代战争 III 全皮肤解锁",
-        amount: 599,
-        quantityText: "× 1 套服务",
-        coverImage:
-          "https://images.unsplash.com/photo-1542751110-97427bbecf20?auto=format&fit=crop&w=1200&q=80",
-        createdAt: "2023.11.24 12:15",
-        payMethod: "待支付",
-        paidAmount: 0,
-        progress: buildProgress("pendingPay"),
-        deliveries: [],
-        createdBy: "seed",
-        userId: "",
-        productId: "",
-        refundStatus: "none",
-        assignedWorkerId: "",
-        assignedAt: "",
-        completedAt: ""
-      }
-    );
-  }
+  ) {}
 
   /** 管理端：订单列表（全量） */
-  public listOrders(filters: ListFilters): ApiEnvelope<{ items: Order[]; total: number }> {
-    const keyword = normalizeKeyword(filters.keyword);
+  public async listOrders(
+    filters: ListFilters
+  ): Promise<ApiEnvelope<{ items: Order[]; total: number }>> {
+    const keywordRaw = normalizeKeyword(filters.keyword);
     const pageSize = Math.max(1, Math.min(100, Math.floor(filters.pageSize ?? 10)));
     const page = Math.max(1, Math.floor(filters.page ?? 1));
 
-    const filtered = this.orders.filter((item) => {
-      if (filters.status && item.status !== filters.status) return false;
-      if (!keyword) return true;
-      const statusLabel = STATUS_LABEL_MAP[item.status];
-      return (
-        item.orderNo.toLowerCase().includes(keyword) ||
-        item.serviceTitle.toLowerCase().includes(keyword) ||
-        statusLabel.toLowerCase().includes(keyword)
-      );
-    });
+    const statusesFromChinese = orderStatusesMatchingLabelKeyword(keywordRaw);
 
-    const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
+    const whereParts: Prisma.BizOrderWhereInput[] = [];
+    if (filters.status) whereParts.push({ status: toBizOrderStatus(filters.status) });
+    if (keywordRaw.length > 0) {
+      whereParts.push({
+        OR: [
+          { orderNo: { contains: keywordRaw, mode: "insensitive" } },
+          { serviceTitle: { contains: keywordRaw, mode: "insensitive" } },
+          ...(statusesFromChinese.length ? [{ status: { in: statusesFromChinese } }] : [])
+        ]
+      });
+    }
+    const where: Prisma.BizOrderWhereInput =
+      whereParts.length === 0 ? {} : whereParts.length === 1 ? whereParts[0]! : { AND: whereParts };
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.bizOrder.count({ where }),
+      this.prisma.bizOrder.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      })
+    ]);
 
     return {
       code: 0,
       message: "ok",
       data: {
-        items,
-        total: filtered.length
+        items: rows.map(mapRowToOrder),
+        total
       }
     };
   }
 
   /** 管理端 / 调试：按 ID 取单 */
-  public getOrder(id: string): ApiEnvelope<Order> {
-    const found = this.orders.find((item) => item.id === id) ?? null;
-    if (!found) return { code: 404, message: "order not found", data: null };
-    return { code: 0, message: "ok", data: found };
+  public async getOrder(id: string): Promise<ApiEnvelope<Order>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    return { code: 0, message: "ok", data: mapRowToOrder(row) };
   }
 
   /** 小程序老板：确认结单（pendingDone → done），虚拟服务无实体收货环节 */
-  public confirmCloseOrderMini(userId: string, orderId: string): ApiEnvelope<Order> {
-    const index = this.orders.findIndex((item) => item.id === orderId);
-    if (index < 0) return { code: 404, message: "order not found", data: null };
-    const found = this.orders[index];
-    if (found.userId !== userId) return { code: 403, message: "forbidden", data: null };
-    if (found.status !== "pendingDone") {
+  public async confirmCloseOrderMini(userId: string, orderId: string): Promise<ApiEnvelope<Order>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    if ((row.userId ?? "") !== userId) return { code: 403, message: "forbidden", data: null };
+    if (toOrderStatus(row.status) !== "pendingDone") {
       return { code: 400, message: "当前订单状态不可结单", data: null };
     }
 
-    const next: Order = {
-      ...found,
-      status: "done",
-      progress: buildProgress("done"),
-      completedAt: new Date().toISOString()
-    };
-    this.orders[index] = next;
-    return { code: 0, message: "ok", data: next };
+    const next = await this.prisma.bizOrder.update({
+      where: { id: orderId },
+      data: {
+        status: BizOrderStatus.done,
+        completedAt: new Date().toISOString(),
+        updatedAt: new Date()
+      }
+    });
+    return { code: 0, message: "ok", data: mapRowToOrder(next) };
   }
 
   /** 打手工作台：汇总 + 待接单池（pendingTake 且未分配） */
-  public getWorkerWorkbench(
+  public async getWorkerWorkbench(
     workerId: string,
     presenceMode: "online" | "rest"
-  ): ApiEnvelope<{
-    presence: "online" | "rest";
-    summary: {
-      todayIncome: number;
-      incomeTrendPercent: number | null;
-      completedOrdersToday: number;
-      successRatePercent: number;
-      pendingPoolCount: number;
-      myProcessingCount: number;
-    };
-    pendingOrders: Order[];
-  }> {
-    const pendingPool = this.orders.filter((o) => {
-      if (o.status !== "pendingTake") return false;
-      if ((o.assignedWorkerId ?? "").trim().length > 0) return false;
-      return true;
+  ): Promise<
+    ApiEnvelope<{
+      presence: "online" | "rest";
+      summary: {
+        todayIncome: number;
+        incomeTrendPercent: number | null;
+        completedOrdersToday: number;
+        successRatePercent: number;
+        pendingPoolCount: number;
+        myProcessingCount: number;
+      };
+      pendingOrders: Order[];
+    }>
+  > {
+    const pendingPoolRows = await this.prisma.bizOrder.findMany({
+      where: {
+        status: BizOrderStatus.pendingTake,
+        OR: [{ assignedWorkerId: null }, { assignedWorkerId: "" }]
+      },
+      orderBy: { createdAt: "desc" }
     });
+    const pendingPool = pendingPoolRows.map(mapRowToOrder);
+
+    const workerOrdersFull = await this.prisma.bizOrder.findMany({
+      where: { assignedWorkerId: workerId },
+      orderBy: { createdAt: "desc" }
+    });
+    const workerMapped = workerOrdersFull.map(mapRowToOrder);
 
     const today = todayUtcPrefix();
     const yesterday = yesterdayUtcPrefix();
-    const todayIncome = incomeSumForWorkerOnDay(this.orders, workerId, today);
-    const yesterdayIncome = incomeSumForWorkerOnDay(this.orders, workerId, yesterday);
+    const todayIncome = incomeSumForWorkerOnDay(workerMapped, workerId, today);
+    const yesterdayIncome = incomeSumForWorkerOnDay(workerMapped, workerId, yesterday);
 
     let incomeTrendPercent: number | null = null;
     if (yesterdayIncome <= 0 && todayIncome > 0) incomeTrendPercent = 100;
@@ -320,12 +347,8 @@ export class OrderService {
         Math.round(((todayIncome - yesterdayIncome) / yesterdayIncome) * 1000) / 10;
     }
 
-    const mineDone = this.orders.filter(
-      (o) => o.assignedWorkerId === workerId && o.status === "done"
-    );
-    const mineCancelled = this.orders.filter(
-      (o) => o.assignedWorkerId === workerId && o.status === "cancelled"
-    );
+    const mineDone = workerMapped.filter((o) => o.status === "done");
+    const mineCancelled = workerMapped.filter((o) => o.status === "cancelled");
     const denom = mineDone.length + mineCancelled.length;
     const successRatePercent =
       denom === 0 ? 100 : Math.round((mineDone.length / denom) * 1000) / 10;
@@ -334,9 +357,8 @@ export class OrderService {
       (o.completedAt ?? "").startsWith(today)
     ).length;
 
-    const myProcessingCount = this.orders.filter(
-      (o) =>
-        o.assignedWorkerId === workerId && (o.status === "serving" || o.status === "pendingDone")
+    const myProcessingCount = workerMapped.filter(
+      (o) => o.status === "serving" || o.status === "pendingDone"
     ).length;
 
     return {
@@ -358,16 +380,21 @@ export class OrderService {
   }
 
   /** 打手：订单列表（仅本人接单后的订单） */
-  public listWorkerOrders(
+  public async listWorkerOrders(
     workerId: string,
     filters: WorkerListFilters
-  ): ApiEnvelope<{ items: Order[]; total: number; counts: WorkerOrderTabCounts }> {
+  ): Promise<ApiEnvelope<{ items: Order[]; total: number; counts: WorkerOrderTabCounts }>> {
     const bucket = filters.bucket ?? "all";
     const pageSize = Math.max(1, Math.min(100, Math.floor(filters.pageSize ?? 20)));
     const page = Math.max(1, Math.floor(filters.page ?? 1));
 
-    const filtered = this.orders.filter((item) => matchesWorkerBucket(item, workerId, bucket));
-    const counts = buildWorkerTabCounts(this.orders, workerId);
+    const workerRows = await this.prisma.bizOrder.findMany({
+      where: { assignedWorkerId: workerId },
+      orderBy: { createdAt: "desc" }
+    });
+    const allMine = workerRows.map(mapRowToOrder);
+    const filtered = allMine.filter((item) => matchesWorkerBucket(item, workerId, bucket));
+    const counts = buildWorkerTabCounts(allMine, workerId);
 
     const start = (page - 1) * pageSize;
     const items = filtered.slice(start, start + pageSize);
@@ -384,12 +411,13 @@ export class OrderService {
   }
 
   /** 打手：订单详情（池内待接单订单任何人可看详情；已接单仅本人） */
-  public getWorkerOrder(
+  public async getWorkerOrder(
     workerId: string,
     orderId: string
-  ): ApiEnvelope<Order & { workerStage: WorkerOrderStage }> {
-    const found = this.orders.find((item) => item.id === orderId) ?? null;
-    if (!found) return { code: 404, message: "order not found", data: null };
+  ): Promise<ApiEnvelope<Order & { workerStage: WorkerOrderStage }>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    const found = mapRowToOrder(row);
 
     const unassignedPool = found.status === "pendingTake" && !(found.assignedWorkerId ?? "").trim();
     const isAssignee = found.assignedWorkerId === workerId;
@@ -405,14 +433,14 @@ export class OrderService {
   }
 
   /** 打手：接单并开始执行（pendingTake → serving） */
-  public startWorkerOrder(
+  public async startWorkerOrder(
     workerId: string,
     orderId: string
-  ): ApiEnvelope<Order & { workerStage: WorkerOrderStage }> {
-    const index = this.orders.findIndex((item) => item.id === orderId);
-    if (index < 0) return { code: 404, message: "order not found", data: null };
+  ): Promise<ApiEnvelope<Order & { workerStage: WorkerOrderStage }>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
 
-    const order = this.orders[index];
+    const order = mapRowToOrder(row);
     if (order.status !== "pendingTake") {
       return { code: 400, message: "order is not pending acceptance", data: null };
     }
@@ -420,14 +448,16 @@ export class OrderService {
       return { code: 400, message: "order already assigned", data: null };
     }
 
-    const next: Order = {
-      ...order,
-      status: "serving",
-      assignedWorkerId: workerId,
-      assignedAt: formatCreatedAt(),
-      progress: buildProgress("serving")
-    };
-    this.orders[index] = next;
+    const nextRow = await this.prisma.bizOrder.update({
+      where: { id: orderId },
+      data: {
+        status: BizOrderStatus.serving,
+        assignedWorkerId: workerId,
+        assignedAt: formatCreatedAtFromDate(new Date()),
+        updatedAt: new Date()
+      }
+    });
+    const next = mapRowToOrder(nextRow);
 
     return {
       code: 0,
@@ -437,25 +467,27 @@ export class OrderService {
   }
 
   /** 打手：确认完成服务（serving → pendingDone，等待老板验收） */
-  public workerConfirmComplete(
+  public async workerConfirmComplete(
     workerId: string,
     orderId: string
-  ): ApiEnvelope<Order & { workerStage: WorkerOrderStage }> {
-    const index = this.orders.findIndex((item) => item.id === orderId);
-    if (index < 0) return { code: 404, message: "order not found", data: null };
+  ): Promise<ApiEnvelope<Order & { workerStage: WorkerOrderStage }>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
 
-    const order = this.orders[index];
+    const order = mapRowToOrder(row);
     if (order.assignedWorkerId !== workerId) return { code: 403, message: "forbidden", data: null };
     if (order.status !== "serving") {
       return { code: 400, message: "order is not in serving status", data: null };
     }
 
-    const next: Order = {
-      ...order,
-      status: "pendingDone",
-      progress: buildProgress("pendingDone")
-    };
-    this.orders[index] = next;
+    const nextRow = await this.prisma.bizOrder.update({
+      where: { id: orderId },
+      data: {
+        status: BizOrderStatus.pendingDone,
+        updatedAt: new Date()
+      }
+    });
+    const next = mapRowToOrder(nextRow);
 
     return {
       code: 0,
@@ -465,54 +497,88 @@ export class OrderService {
   }
 
   /** 小程序「我的」页：当前用户订单 Tab 聚合数量 */
-  public getMiniOrderTabCounts(userId: string): MiniOrderTabCounts {
-    const mine = this.orders.filter((item) => item.userId === userId);
+  public async getMiniOrderTabCounts(userId: string): Promise<MiniOrderTabCounts> {
+    const rows = await this.prisma.bizOrder.findMany({
+      where: { userId },
+      select: { status: true, refundStatus: true }
+    });
+    const mine = rows.map((r) => ({
+      status: toOrderStatus(r.status),
+      refundStatus: toRefundStatus(r.refundStatus)
+    }));
     return this.buildMiniTabCounts(mine);
   }
 
   /** 小程序：当前用户订单列表 + Tab 数量 */
-  public listMiniOrders(
+  public async listMiniOrders(
     userId: string,
     filters: MiniListFilters
-  ): ApiEnvelope<{ items: Order[]; total: number; counts: MiniOrderTabCounts }> {
-    const keyword = normalizeKeyword(filters.keyword);
+  ): Promise<ApiEnvelope<{ items: Order[]; total: number; counts: MiniOrderTabCounts }>> {
+    const keywordRaw = normalizeKeyword(filters.keyword);
     const pageSize = Math.max(1, Math.min(100, Math.floor(filters.pageSize ?? 20)));
     const page = Math.max(1, Math.floor(filters.page ?? 1));
 
-    const mine = this.orders.filter((item) => item.userId === userId);
-    const counts = this.buildMiniTabCounts(mine);
-
-    const filtered = mine.filter((item) => {
-      if (filters.status && item.status !== filters.status) return false;
-      if (!keyword) return true;
-      const statusLabel = STATUS_LABEL_MAP[item.status];
-      return (
-        item.orderNo.toLowerCase().includes(keyword) ||
-        item.serviceTitle.toLowerCase().includes(keyword) ||
-        statusLabel.toLowerCase().includes(keyword)
-      );
+    const countRows = await this.prisma.bizOrder.findMany({
+      where: { userId },
+      select: { status: true, refundStatus: true }
     });
+    const counts = this.buildMiniTabCounts(
+      countRows.map((r) => ({
+        status: toOrderStatus(r.status),
+        refundStatus: toRefundStatus(r.refundStatus)
+      }))
+    );
 
-    const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
+    const statusesFromChinese = orderStatusesMatchingLabelKeyword(keywordRaw);
+
+    const listWhereBase: Prisma.BizOrderWhereInput = {
+      userId,
+      ...(filters.status ? { status: toBizOrderStatus(filters.status) } : {})
+    };
+
+    const listWhere: Prisma.BizOrderWhereInput =
+      keywordRaw.length > 0
+        ? ({
+            AND: [
+              listWhereBase,
+              {
+                OR: [
+                  { orderNo: { contains: keywordRaw, mode: "insensitive" } },
+                  { serviceTitle: { contains: keywordRaw, mode: "insensitive" } },
+                  ...(statusesFromChinese.length ? [{ status: { in: statusesFromChinese } }] : [])
+                ]
+              }
+            ]
+          } satisfies Prisma.BizOrderWhereInput)
+        : listWhereBase;
+
+    const [filteredTotal, pageRows] = await this.prisma.$transaction([
+      this.prisma.bizOrder.count({ where: listWhere }),
+      this.prisma.bizOrder.findMany({
+        where: listWhere,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      })
+    ]);
 
     return {
       code: 0,
       message: "ok",
       data: {
-        items,
-        total: filtered.length,
+        items: pageRows.map(mapRowToOrder),
+        total: filteredTotal,
         counts
       }
     };
   }
 
   /** 小程序：创建订单（待付款） */
-  public createMiniOrder(userId: string, productId: string): ApiEnvelope<Order> {
+  public async createMiniOrder(userId: string, productId: string): Promise<ApiEnvelope<Order>> {
     const trimmedId = productId.trim();
     if (!trimmedId) return { code: 400, message: "productId is required", data: null };
 
-    const productEnvelope = this.productService.getProduct(trimmedId);
+    const productEnvelope = await this.productService.getProduct(trimmedId);
     if (productEnvelope.code !== 0 || !productEnvelope.data) {
       return { code: productEnvelope.code, message: productEnvelope.message, data: null };
     }
@@ -526,52 +592,57 @@ export class OrderService {
     const titleAccent = product.titleAccent.trim();
     const serviceTitle = titleAccent.length > 0 ? `${product.name} ${titleAccent}` : product.name;
     const lines = product.descriptionLines ?? [];
-    const deliveries = lines.slice(0, 12).map((text, index) => ({
+    const deliveriesPayload = lines.slice(0, 12).map((text, index) => ({
       id: `d-${index}`,
       text,
       done: false
     }));
 
-    const order: Order = {
-      id: orderId,
-      orderNo: createOrderNo(),
-      status: "pendingPay",
-      packageTag,
-      serviceTitle,
-      amount: product.price,
-      quantityText: "× 1 套服务",
-      coverImage: product.heroImages[0] ?? product.imageUrl,
-      createdAt: formatCreatedAt(),
-      payMethod: "待支付",
-      paidAmount: 0,
-      progress: buildProgress("pendingPay"),
-      deliveries,
-      createdBy: userId,
-      userId,
-      productId: product.id,
-      refundStatus: "none",
-      assignedWorkerId: "",
-      assignedAt: "",
-      completedAt: ""
-    };
+    const row = await this.prisma.bizOrder.create({
+      data: {
+        id: orderId,
+        orderNo: createOrderNo(),
+        status: BizOrderStatus.pendingPay,
+        packageTag,
+        serviceTitle,
+        amount: product.price,
+        quantityText: "× 1 套服务",
+        coverImage: product.heroImages[0] ?? product.imageUrl,
+        payMethod: "待支付",
+        paidAmount: 0,
+        deliveries: deliveriesPayload as unknown as Prisma.InputJsonValue,
+        createdBy: userId,
+        userId,
+        productId: product.id,
+        refundStatus: BizRefundStatus.none,
+        assignedWorkerId: null,
+        assignedAt: "",
+        completedAt: "",
+        wxTransactionId: null
+      }
+    });
 
-    this.orders.unshift(order);
-    return { code: 0, message: "ok", data: order };
+    return { code: 0, message: "ok", data: mapRowToOrder(row) };
   }
 
   /** 小程序：订单详情（归属校验） */
-  public getMiniOrder(userId: string, orderId: string): ApiEnvelope<Order> {
-    const found = this.orders.find((item) => item.id === orderId) ?? null;
-    if (!found) return { code: 404, message: "order not found", data: null };
-    if (found.userId !== userId) return { code: 403, message: "forbidden", data: null };
-    return { code: 0, message: "ok", data: found };
+  public async getMiniOrder(userId: string, orderId: string): Promise<ApiEnvelope<Order>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    if ((row.userId ?? "") !== userId) return { code: 403, message: "forbidden", data: null };
+    return { code: 0, message: "ok", data: mapRowToOrder(row) };
   }
 
   /** 小程序：申请退款（写入退款状态） */
-  public requestRefundMini(userId: string, orderId: string): ApiEnvelope<{ success: true }> {
-    const found = this.orders.find((item) => item.id === orderId) ?? null;
-    if (!found) return { code: 404, message: "order not found", data: null };
-    if (found.userId !== userId) return { code: 403, message: "forbidden", data: null };
+  public async requestRefundMini(
+    userId: string,
+    orderId: string
+  ): Promise<ApiEnvelope<{ success: true }>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    if ((row.userId ?? "") !== userId) return { code: 403, message: "forbidden", data: null };
+
+    const found = mapRowToOrder(row);
     if (found.refundStatus === "pending") {
       return { code: 400, message: "退款申请处理中", data: null };
     }
@@ -585,15 +656,18 @@ export class OrderService {
       return { code: 400, message: "订单尚未支付或无可退款金额", data: null };
     }
 
-    const next: Order = { ...found, refundStatus: "pending" satisfies RefundStatus };
-    const idx = this.orders.findIndex((item) => item.id === orderId);
-    if (idx >= 0) this.orders[idx] = next;
+    await this.prisma.bizOrder.update({
+      where: { id: orderId },
+      data: { refundStatus: BizRefundStatus.pending, updatedAt: new Date() }
+    });
 
     return { code: 0, message: "ok", data: { success: true } };
   }
 
   /** 统计小程序 Tab 数量（基于已筛选的当前用户订单列表） */
-  private buildMiniTabCounts(mine: Order[]): MiniOrderTabCounts {
+  private buildMiniTabCounts(
+    mine: { status: OrderStatus; refundStatus: RefundStatus }[]
+  ): MiniOrderTabCounts {
     const counts: MiniOrderTabCounts = {
       all: mine.length,
       pendingPay: 0,
@@ -621,20 +695,23 @@ export class OrderService {
   /**
    * 微信支付回调或本地模拟：待付款 → 待接单。
    */
-  public markMiniOrderPaidFromNotify(outTradeNo: string, wxTransactionId?: string): boolean {
-    const idx = this.orders.findIndex((o) => o.id === outTradeNo);
-    if (idx < 0) return false;
-    const found = this.orders[idx];
-    if (found.status !== "pendingPay") return true;
-    const next: Order = {
-      ...found,
-      status: "pendingTake",
-      paidAmount: found.amount,
-      payMethod: "微信支付",
-      progress: buildProgress("pendingTake"),
-      wxTransactionId: wxTransactionId ?? found.wxTransactionId
-    };
-    this.orders[idx] = next;
+  public async markMiniOrderPaidFromNotify(
+    outTradeNo: string,
+    wxTransactionId?: string
+  ): Promise<boolean> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: outTradeNo } });
+    if (!row) return false;
+    if (row.status !== BizOrderStatus.pendingPay) return true;
+    await this.prisma.bizOrder.update({
+      where: { id: outTradeNo },
+      data: {
+        status: BizOrderStatus.pendingTake,
+        paidAmount: row.amount,
+        payMethod: "微信支付",
+        wxTransactionId: wxTransactionId ?? row.wxTransactionId,
+        updatedAt: new Date()
+      }
+    });
     return true;
   }
 
@@ -645,15 +722,16 @@ export class OrderService {
     userId: string,
     orderId: string
   ): Promise<ApiEnvelope<MiniWechatPrepayData>> {
-    const found = this.orders.find((item) => item.id === orderId) ?? null;
-    if (!found) return { code: 404, message: "order not found", data: null };
-    if (found.userId !== userId) return { code: 403, message: "forbidden", data: null };
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    const found = mapRowToOrder(row);
+    if ((row.userId ?? "") !== userId) return { code: 403, message: "forbidden", data: null };
     if (found.status !== "pendingPay") {
       return { code: 400, message: "订单状态不可支付", data: null };
     }
 
     if (this.wechatPayService.shouldSimulateImmediatePay()) {
-      this.markMiniOrderPaidFromNotify(found.id, "SIMULATED");
+      await this.markMiniOrderPaidFromNotify(found.id, "SIMULATED");
       return { code: 0, message: "ok", data: { mockPaid: true } };
     }
 
@@ -688,7 +766,11 @@ export class OrderService {
   }
 
   /** 分配给指定打手的订单（用于收益结算聚合） */
-  public findOrdersAssignedToWorker(workerId: string): Order[] {
-    return this.orders.filter((item) => item.assignedWorkerId === workerId);
+  public async findOrdersAssignedToWorker(workerId: string): Promise<Order[]> {
+    const rows = await this.prisma.bizOrder.findMany({
+      where: { assignedWorkerId: workerId },
+      orderBy: { createdAt: "desc" }
+    });
+    return rows.map(mapRowToOrder);
   }
 }

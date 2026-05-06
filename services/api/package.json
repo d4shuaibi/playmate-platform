@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "commonjs",
+  "prisma": {
+    "seed": "node prisma/seed.cjs"
+  },
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",

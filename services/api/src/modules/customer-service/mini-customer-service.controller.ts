@@ -10,7 +10,7 @@ export class MiniCustomerServiceController {
   constructor(private readonly customerServiceService: CustomerServiceService) {}
 
   @Get("agents")
-  listAgentsForMini() {
+  async listAgentsForMini() {
     return this.customerServiceService.listAgentsForMini();
   }
 }

@@ -33,6 +33,7 @@ model User {
 
   workerProfile WorkerProfile?
   refreshTokens  RefreshToken[]
+  orders         BizOrder[]
 }
 
 model WorkerProfile {
@@ -65,3 +66,178 @@ model RefreshToken {
   @@index([expiresAt])
 }
 
+// ----- 业务落库（商品 / 订单 / 客服 / 打手入驻） -----
+
+enum CatalogProductStatus {
+  enabled
+  disabled
+}
+
+enum BizOrderStatus {
+  pendingPay
+  pendingTake
+  serving
+  pendingDone
+  done
+  cancelled
+}
+
+enum BizRefundStatus {
+  none
+  pending
+  approved
+  rejected
+}
+
+enum WorkerJoinApplicationStatus {
+  submitted
+  reviewing
+  approved
+  rejected
+}
+
+enum WorkerAccountOperationalStatus {
+  active
+  disabled
+}
+
+/// Prisma 枚举不可含连字符；API 仍为 "all-around"，读写时做映射
+enum WorkerAssessmentKind {
+  moba
+  fps
+  strategy
+  all_around
+}
+
+model ProductCategory {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name      String
+  disabled  Boolean  @default(false)
+  createdBy String
+
+  products Product[]
+}
+
+model Product {
+  id        String               @id
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  name          String
+  imageUrl      String
+  heroImages    String[]
+  titleAccent   String             @default("")
+  categoryId    String
+  category      ProductCategory    @relation(fields: [categoryId], references: [id], onUpdate: Cascade)
+  categoryName  String
+
+  price         Decimal            @db.Decimal(12, 2)
+  originPrice   Decimal?           @db.Decimal(12, 2)
+  stockText     String             @default("")
+  badges        String[]
+  descriptionLines String[]
+  notices       Json               @default("[]")
+
+  status        CatalogProductStatus @default(enabled)
+  createdBy     String
+
+  orders BizOrder[]
+
+  @@index([categoryId])
+  @@index([status])
+}
+
+model CustomerServiceAgent {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  nickname    String
+  wechatId    String
+  disabled    Boolean @default(false)
+  avatarUrl   String
+  wechatQrUrl String
+
+  @@index([disabled])
+}
+
+/// 入驻申请（userId 不强制 FK User，兼容演示数据与离线审核）
+model WorkerJoinApplication {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refNo    String @unique
+  userId   String
+
+  realName String
+  age      Int
+  phone    String
+  idNo     String
+
+  assessmentType WorkerAssessmentKind
+  status         WorkerJoinApplicationStatus
+  rejectReason   String?
+
+  @@index([userId])
+  @@index([status])
+}
+
+/// 已通过审核的打手账号（工作台接单用 JWT sub = userId；与 WorkerProfile 不同）
+model WorkerAccount {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId   String @unique
+
+  realName String
+  phone    String
+
+  assessmentType WorkerAssessmentKind
+  joinStatus     WorkerJoinApplicationStatus @default(approved)
+  status         WorkerAccountOperationalStatus @default(active)
+
+  @@index([joinStatus])
+  @@index([status])
+}
+
+model BizOrder {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderNo     String           @unique
+  status      BizOrderStatus
+  packageTag  String
+  serviceTitle String
+  amount      Decimal          @db.Decimal(12, 2)
+  quantityText String
+  coverImage  String
+
+  payMethod   String
+  paidAmount  Decimal          @db.Decimal(12, 2)
+  deliveries  Json             @default("[]")
+
+  createdBy String
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  productId String?
+  product   Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  refundStatus     BizRefundStatus @default(none)
+  assignedWorkerId String?
+  assignedAt       String          @default("")
+  completedAt      String          @default("")
+  wxTransactionId  String?
+
+  @@index([userId, status])
+  @@index([status])
+  @@index([assignedWorkerId])
+  @@index([createdAt])
+  @@map("biz_orders")
+}

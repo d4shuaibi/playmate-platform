@@ -48,7 +48,7 @@ export class MiniMeService {
         ? (walletRaw as { toNumber: () => number }).toNumber()
         : Number(walletRaw);
 
-    const orderCounts = this.orderService.getMiniOrderTabCounts(userId);
+    const orderCounts = await this.orderService.getMiniOrderTabCounts(userId);
 
     return {
       code: 0,

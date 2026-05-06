@@ -15,7 +15,7 @@ export class MiniCatalogController {
    */
   @Get("product-categories")
   async listCategories() {
-    const data = this.productCategoryService.listCategories({
+    const data = await this.productCategoryService.listCategories({
       disabled: false,
       page: 1,
       pageSize: 100
@@ -44,7 +44,7 @@ export class MiniCatalogController {
    */
   @Get("products/:id")
   async detail(@Param("id") id: string) {
-    const result = this.productService.getProduct(id);
+    const result = await this.productService.getProduct(id);
     if (result.code !== 0 || !result.data) return result;
     if (result.data.status !== "enabled") {
       return { code: 404, message: "product not found", data: null };

@@ -30,7 +30,7 @@ export class WechatPayNotifyController {
 
   @Post("notify")
   @HttpCode(200)
-  handle(@Req() req: Request & { rawBody?: Buffer }) {
+  async handle(@Req() req: Request & { rawBody?: Buffer }) {
     try {
       const rawText =
         typeof req.rawBody !== "undefined"
@@ -67,7 +67,7 @@ export class WechatPayNotifyController {
         return { code: "SUCCESS", message: "成功" };
       }
 
-      this.orderService.markMiniOrderPaidFromNotify(outTradeNo, wxTx);
+      await this.orderService.markMiniOrderPaidFromNotify(outTradeNo, wxTx);
       return { code: "SUCCESS", message: "成功" };
     } catch (e) {
       this.logger.warn(`处理支付通知异常：${e instanceof Error ? e.message : String(e)}`);

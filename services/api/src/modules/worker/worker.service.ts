@@ -1,5 +1,16 @@
 import { Injectable } from "@nestjs/common";
+import type {
+  Prisma,
+  WorkerAccount as WorkerAccountRow,
+  WorkerJoinApplication as WorkerJoinApplicationRow
+} from "@prisma/client";
+import {
+  WorkerAccountOperationalStatus,
+  WorkerAssessmentKind,
+  WorkerJoinApplicationStatus
+} from "@prisma/client";
 import { randomUUID } from "crypto";
+import { PrismaService } from "../../prisma/prisma.service";
 import {
   type Worker,
   type WorkerAssessmentOptionDto,
@@ -23,19 +34,13 @@ const WORKER_ASSESSMENT_OPTIONS: WorkerAssessmentOptionDto[] = [
   { value: "all-around", label: "全能打手综合考核", description: "多品类综合能力" }
 ];
 
-const nowText = () => {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-};
-
-const buildRefNo = () => {
+const buildRefNo = (): string => {
   return `WK-${new Date().getFullYear()}-${randomUUID().slice(0, 8).toUpperCase()}`;
 };
 
-const normalizePhone = (value: string) => value.trim();
-const normalizeIdNo = (value: string) => value.trim();
-const normalizeName = (value: string) => value.trim();
+const normalizePhone = (value: string): string => value.trim();
+const normalizeIdNo = (value: string): string => value.trim();
+const normalizeName = (value: string): string => value.trim();
 
 const resolveAssessmentType = (raw: unknown): WorkerAssessmentType | null => {
   const s = typeof raw === "string" ? raw.trim() : "";
@@ -43,90 +48,127 @@ const resolveAssessmentType = (raw: unknown): WorkerAssessmentType | null => {
   return hit ? hit.value : null;
 };
 
+const toPrismaAssessment = (t: WorkerAssessmentType): WorkerAssessmentKind => {
+  if (t === "all-around") return WorkerAssessmentKind.all_around;
+  if (t === "moba") return WorkerAssessmentKind.moba;
+  if (t === "fps") return WorkerAssessmentKind.fps;
+  if (t === "strategy") return WorkerAssessmentKind.strategy;
+  return WorkerAssessmentKind.all_around;
+};
+
+const toApiAssessment = (t: WorkerAssessmentKind): WorkerAssessmentType => {
+  if (t === WorkerAssessmentKind.all_around) return "all-around";
+  if (t === WorkerAssessmentKind.moba) return "moba";
+  if (t === WorkerAssessmentKind.fps) return "fps";
+  return "strategy";
+};
+
+const formatTs = (d: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+};
+
+const mapJoinStatus = (s: WorkerJoinApplicationStatus): WorkerJoinStatus => {
+  if (s === WorkerJoinApplicationStatus.submitted) return "submitted";
+  if (s === WorkerJoinApplicationStatus.reviewing) return "reviewing";
+  if (s === WorkerJoinApplicationStatus.approved) return "approved";
+  return "rejected";
+};
+
+const mapApplicationRow = (row: WorkerJoinApplicationRow): WorkerJoinApplication => ({
+  id: row.id,
+  refNo: row.refNo,
+  userId: row.userId,
+  realName: row.realName,
+  age: row.age,
+  phone: row.phone,
+  idNo: row.idNo,
+  assessmentType: toApiAssessment(row.assessmentType),
+  status: mapJoinStatus(row.status),
+  rejectReason: row.rejectReason ?? undefined,
+  createdAt: formatTs(row.createdAt),
+  updatedAt: formatTs(row.updatedAt)
+});
+
+const mapWorkerAccountRow = (row: WorkerAccountRow): Worker => ({
+  id: row.id,
+  userId: row.userId,
+  realName: row.realName,
+  phone: row.phone,
+  assessmentType: toApiAssessment(row.assessmentType),
+  joinStatus: mapJoinStatus(row.joinStatus),
+  status: row.status === WorkerAccountOperationalStatus.active ? "active" : "disabled",
+  createdAt: formatTs(row.createdAt),
+  updatedAt: formatTs(row.updatedAt)
+});
+
 @Injectable()
 export class WorkerService {
-  private readonly applications: WorkerJoinApplication[] = [];
-  private readonly workers: Worker[] = [];
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor() {
-    const allowSeed = process.env.SEED_DEMO === "true" || process.env.NODE_ENV !== "production";
-    if (!allowSeed) return;
-
-    const createdAt = nowText();
-    const updatedAt = createdAt;
-
-    this.applications.push({
-      id: "app-1",
-      refNo: "WK-2026-DEMO-0001",
-      userId: "seed-user-1",
-      realName: "张三",
-      age: 22,
-      phone: "+8613711112222",
-      idNo: "110101199001011234",
-      assessmentType: "fps",
-      status: "reviewing",
-      createdAt,
-      updatedAt
-    });
-
-    this.applications.push({
-      id: "app-2",
-      refNo: "WK-2026-DEMO-0002",
-      userId: "seed-user-2",
-      realName: "李四",
-      age: 26,
-      phone: "+8613812345678",
-      idNo: "310101199201011234",
-      assessmentType: "moba",
-      status: "approved",
-      createdAt,
-      updatedAt
-    });
-
-    this.workers.push({
-      id: "worker-1",
-      userId: "seed-user-2",
-      realName: "李四",
-      phone: "+8613812345678",
-      assessmentType: "moba",
-      joinStatus: "approved",
-      status: "active",
-      createdAt,
-      updatedAt
-    });
-  }
-
-  listApplications(params?: {
+  async listApplications(params?: {
     keyword?: string;
     status?: WorkerJoinStatus;
     page?: number;
     pageSize?: number;
-  }): ApiEnvelope<{ items: WorkerJoinApplication[]; total: number }> {
+  }): Promise<ApiEnvelope<{ items: WorkerJoinApplication[]; total: number }>> {
     const keyword = (params?.keyword ?? "").trim();
     const pageSize = Math.max(1, Math.min(100, Math.floor(params?.pageSize ?? 10)));
     const page = Math.max(1, Math.floor(params?.page ?? 1));
 
-    const filtered = this.applications.filter((item) => {
-      if (params?.status && item.status !== params.status) return false;
-      if (!keyword) return true;
-      const hay = `${item.refNo} ${item.realName} ${item.phone}`.toLowerCase();
-      return hay.includes(keyword.toLowerCase());
-    });
+    const prismaStatus = params?.status
+      ? ({
+          submitted: WorkerJoinApplicationStatus.submitted,
+          reviewing: WorkerJoinApplicationStatus.reviewing,
+          approved: WorkerJoinApplicationStatus.approved,
+          rejected: WorkerJoinApplicationStatus.rejected
+        }[params.status] as WorkerJoinApplicationStatus)
+      : undefined;
 
-    const start = (page - 1) * pageSize;
+    const where: Prisma.WorkerJoinApplicationWhereInput = {
+      ...(prismaStatus ? { status: prismaStatus } : {}),
+      ...(keyword.length > 0
+        ? {
+            OR: [
+              { refNo: { contains: keyword, mode: "insensitive" } },
+              { realName: { contains: keyword, mode: "insensitive" } },
+              { phone: { contains: keyword, mode: "insensitive" } },
+              { userId: { contains: keyword, mode: "insensitive" } }
+            ]
+          }
+        : {})
+    };
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.workerJoinApplication.count({ where }),
+      this.prisma.workerJoinApplication.findMany({
+        where,
+        orderBy: { updatedAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      })
+    ]);
+
     return {
       code: 0,
       message: "ok",
       data: {
-        items: filtered.slice(start, start + pageSize),
-        total: filtered.length
+        items: rows.map(mapApplicationRow),
+        total
       }
     };
   }
 
-  getApplicationByUserId(userId: string): ApiEnvelope<WorkerJoinApplication | null> {
-    const found = this.applications.find((item) => item.userId === userId) ?? null;
-    return { code: 0, message: "ok", data: found };
+  async getApplicationByUserId(userId: string): Promise<ApiEnvelope<WorkerJoinApplication | null>> {
+    const row = await this.prisma.workerJoinApplication.findFirst({
+      where: { userId },
+      orderBy: { updatedAt: "desc" }
+    });
+    return {
+      code: 0,
+      message: "ok",
+      data: row ? mapApplicationRow(row) : null
+    };
   }
 
   /**
@@ -140,14 +182,14 @@ export class WorkerService {
     };
   }
 
-  submitApplication(input: {
+  async submitApplication(input: {
     userId: string;
     realName: string;
     age: number;
     phone: string;
     idNo: string;
     assessmentType: unknown;
-  }): ApiEnvelope<Pick<WorkerJoinApplication, "id" | "refNo" | "status">> {
+  }): Promise<ApiEnvelope<Pick<WorkerJoinApplication, "id" | "refNo" | "status">>> {
     const realName = normalizeName(input.realName);
     const phone = normalizePhone(input.phone);
     const idNo = normalizeIdNo(input.idNo);
@@ -162,118 +204,204 @@ export class WorkerService {
       return { code: 400, message: "Invalid assessmentType", data: null };
     }
 
-    const existed = this.applications.find((item) => item.userId === input.userId);
-    const ts = nowText();
-    if (existed && existed.status !== "rejected") {
+    const existed = await this.prisma.workerJoinApplication.findFirst({
+      where: { userId: input.userId },
+      orderBy: { updatedAt: "desc" }
+    });
+
+    if (existed && mapJoinStatus(existed.status) !== "rejected") {
       return { code: 409, message: "Application already exists", data: null };
     }
 
-    const app: WorkerJoinApplication = {
-      id: existed?.id ?? randomUUID(),
-      refNo: existed?.refNo ?? buildRefNo(),
-      userId: input.userId,
-      realName,
-      age,
-      phone,
-      idNo,
-      assessmentType,
-      status: "reviewing",
-      rejectReason: undefined,
-      createdAt: existed?.createdAt ?? ts,
-      updatedAt: ts
-    };
+    const prismaEnum = toPrismaAssessment(assessmentType);
 
     if (existed) {
-      const idx = this.applications.findIndex((x) => x.id === existed.id);
-      this.applications[idx] = app;
-    } else {
-      this.applications.unshift(app);
+      const row = await this.prisma.workerJoinApplication.update({
+        where: { id: existed.id },
+        data: {
+          realName,
+          age,
+          phone,
+          idNo,
+          assessmentType: prismaEnum,
+          status: WorkerJoinApplicationStatus.reviewing,
+          rejectReason: null,
+          updatedAt: new Date()
+        }
+      });
+      return {
+        code: 0,
+        message: "ok",
+        data: {
+          id: row.id,
+          refNo: row.refNo,
+          status: mapJoinStatus(row.status)
+        }
+      };
     }
+
+    const row = await this.prisma.workerJoinApplication.create({
+      data: {
+        id: randomUUID(),
+        refNo: buildRefNo(),
+        userId: input.userId,
+        realName,
+        age,
+        phone,
+        idNo,
+        assessmentType: prismaEnum,
+        status: WorkerJoinApplicationStatus.reviewing
+      }
+    });
 
     return {
       code: 0,
       message: "ok",
-      data: { id: app.id, refNo: app.refNo, status: app.status }
+      data: {
+        id: row.id,
+        refNo: row.refNo,
+        status: mapJoinStatus(row.status)
+      }
     };
   }
 
-  auditApplication(input: {
+  async auditApplication(input: {
     id: string;
     action: "approve" | "reject";
     rejectReason?: string;
-  }): ApiEnvelope<{ success: true }> {
-    const found = this.applications.find((item) => item.id === input.id);
+  }): Promise<ApiEnvelope<{ success: true }>> {
+    const found = await this.prisma.workerJoinApplication.findUnique({ where: { id: input.id } });
     if (!found) return { code: 404, message: "Application not found", data: null };
 
-    const ts = nowText();
-    if (input.action === "approve") {
-      found.status = "approved";
-      found.rejectReason = undefined;
-      found.updatedAt = ts;
+    const ts = new Date();
 
-      const existedWorker = this.workers.find((w) => w.userId === found.userId);
-      if (existedWorker) {
-        existedWorker.joinStatus = "approved";
-        existedWorker.status = "active";
-        existedWorker.updatedAt = ts;
-      } else {
-        this.workers.unshift({
-          id: randomUUID(),
-          userId: found.userId,
-          realName: found.realName,
-          phone: found.phone,
-          assessmentType: found.assessmentType,
-          joinStatus: "approved",
-          status: "active",
-          createdAt: ts,
-          updatedAt: ts
-        });
-      }
+    if (input.action === "approve") {
+      await this.prisma.$transaction([
+        this.prisma.workerJoinApplication.update({
+          where: { id: input.id },
+          data: {
+            status: WorkerJoinApplicationStatus.approved,
+            rejectReason: null,
+            updatedAt: ts
+          }
+        }),
+        this.prisma.workerAccount.upsert({
+          where: { userId: found.userId },
+          create: {
+            id: randomUUID(),
+            userId: found.userId,
+            realName: found.realName,
+            phone: found.phone,
+            assessmentType: found.assessmentType,
+            joinStatus: WorkerJoinApplicationStatus.approved,
+            status: WorkerAccountOperationalStatus.active
+          },
+          update: {
+            realName: found.realName,
+            phone: found.phone,
+            assessmentType: found.assessmentType,
+            joinStatus: WorkerJoinApplicationStatus.approved,
+            status: WorkerAccountOperationalStatus.active,
+            updatedAt: ts
+          }
+        })
+      ]);
       return { code: 0, message: "ok", data: { success: true } };
     }
 
     const reason = (input.rejectReason ?? "").trim();
-    found.status = "rejected";
-    found.rejectReason = reason || "资料不符合要求";
-    found.updatedAt = ts;
+    await this.prisma.workerJoinApplication.update({
+      where: { id: input.id },
+      data: {
+        status: WorkerJoinApplicationStatus.rejected,
+        rejectReason: reason || "资料不符合要求",
+        updatedAt: ts
+      }
+    });
     return { code: 0, message: "ok", data: { success: true } };
   }
 
-  listWorkers(params?: {
+  async listWorkers(params?: {
     keyword?: string;
     joinStatus?: WorkerJoinStatus;
     status?: WorkerStatus;
     page?: number;
     pageSize?: number;
-  }): ApiEnvelope<{ items: Worker[]; total: number }> {
+  }): Promise<ApiEnvelope<{ items: Worker[]; total: number }>> {
     const keyword = (params?.keyword ?? "").trim();
     const pageSize = Math.max(1, Math.min(100, Math.floor(params?.pageSize ?? 10)));
     const page = Math.max(1, Math.floor(params?.page ?? 1));
 
-    const filtered = this.workers.filter((item) => {
-      if (params?.joinStatus && item.joinStatus !== params.joinStatus) return false;
-      if (params?.status && item.status !== params.status) return false;
-      if (!keyword) return true;
-      const hay = `${item.realName} ${item.phone} ${item.userId}`.toLowerCase();
-      return hay.includes(keyword.toLowerCase());
-    });
+    const joinPrisma = params?.joinStatus
+      ? ({
+          submitted: WorkerJoinApplicationStatus.submitted,
+          reviewing: WorkerJoinApplicationStatus.reviewing,
+          approved: WorkerJoinApplicationStatus.approved,
+          rejected: WorkerJoinApplicationStatus.rejected
+        }[params.joinStatus] as WorkerJoinApplicationStatus)
+      : undefined;
 
-    const start = (page - 1) * pageSize;
+    const opStatus =
+      params?.status === "active"
+        ? WorkerAccountOperationalStatus.active
+        : params?.status === "disabled"
+          ? WorkerAccountOperationalStatus.disabled
+          : undefined;
+
+    const where: Prisma.WorkerAccountWhereInput = {
+      ...(joinPrisma ? { joinStatus: joinPrisma } : {}),
+      ...(opStatus ? { status: opStatus } : {}),
+      ...(keyword.length > 0
+        ? {
+            OR: [
+              { realName: { contains: keyword, mode: "insensitive" } },
+              { phone: { contains: keyword, mode: "insensitive" } },
+              { userId: { contains: keyword, mode: "insensitive" } }
+            ]
+          }
+        : {})
+    };
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.workerAccount.count({ where }),
+      this.prisma.workerAccount.findMany({
+        where,
+        orderBy: { updatedAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      })
+    ]);
+
     return {
       code: 0,
       message: "ok",
       data: {
-        items: filtered.slice(start, start + pageSize),
-        total: filtered.length
+        items: rows.map(mapWorkerAccountRow),
+        total
       }
     };
   }
 
-  toggleWorkerStatus(input: { id: string; status: WorkerStatus }): ApiEnvelope<{ success: true }> {
-    const found = this.workers.find((w) => w.id === input.id);
-    if (!found) return { code: 404, message: "Worker not found", data: null };
-    found.status = input.status;
-    found.updatedAt = nowText();
-    return { code: 0, message: "ok", data: { success: true } };
+  async toggleWorkerStatus(input: {
+    id: string;
+    status: WorkerStatus;
+  }): Promise<ApiEnvelope<{ success: true }>> {
+    const op =
+      input.status === "active"
+        ? WorkerAccountOperationalStatus.active
+        : WorkerAccountOperationalStatus.disabled;
+
+    try {
+      await this.prisma.workerAccount.update({
+        where: { id: input.id },
+        data: {
+          status: op,
+          updatedAt: new Date()
+        }
+      });
+      return { code: 0, message: "ok", data: { success: true } };
+    } catch {
+      return { code: 404, message: "Worker not found", data: null };
+    }
   }
 }

@@ -1,4 +1,6 @@
 import { Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
+import { PrismaService } from "../../prisma/prisma.service";
 import { ProductCategory } from "./product-category.types";
 
 type ApiEnvelope<T> =
@@ -21,116 +23,136 @@ type UpdateCategoryRequest = {
   name: string;
 };
 
-const normalizeKeyword = (value: string | undefined) => {
+const normalizeKeyword = (value: string | undefined): string => {
   return (value ?? "").trim().toLowerCase();
 };
 
-const createCategoryId = () => {
+const createCategoryId = (): string => {
   return `PC-${Math.floor(1000 + Math.random() * 9000)}`;
 };
 
+const mapRowToCategory = (row: {
+  id: string;
+  name: string;
+  disabled: boolean;
+  createdAt: Date;
+  createdBy: string;
+}): ProductCategory => ({
+  id: row.id,
+  name: row.name,
+  disabled: row.disabled,
+  createdAt: row.createdAt.toISOString().slice(0, 10),
+  createdBy: row.createdBy
+});
+
 @Injectable()
 export class ProductCategoryService {
-  private readonly categories: ProductCategory[] = [];
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor() {
-    const allowSeed = process.env.SEED_DEMO === "true" || process.env.NODE_ENV !== "production";
-    if (!allowSeed) return;
-    // dev seed: 便于小程序与管理端联调
-    this.categories.push(
-      {
-        id: "PC-1001",
-        name: "带出类",
-        disabled: false,
-        createdAt: "2026-04-24",
-        createdBy: "seed"
-      },
-      {
-        id: "PC-1002",
-        name: "保底类",
-        disabled: false,
-        createdAt: "2026-04-24",
-        createdBy: "seed"
-      }
-    );
-  }
-
-  public listCategories(
+  public async listCategories(
     filters: ListFilters
-  ): ApiEnvelope<{ items: ProductCategory[]; total: number }> {
-    const keyword = normalizeKeyword(filters.keyword);
+  ): Promise<ApiEnvelope<{ items: ProductCategory[]; total: number }>> {
+    const keywordRaw = normalizeKeyword(filters.keyword);
     const pageSize = Math.max(1, Math.min(100, Math.floor(filters.pageSize ?? 10)));
     const page = Math.max(1, Math.floor(filters.page ?? 1));
 
-    const filtered = this.categories.filter((item) => {
-      if (filters.disabled !== undefined && item.disabled !== filters.disabled) return false;
-      if (!keyword) return true;
-      return item.name.toLowerCase().includes(keyword) || item.id.toLowerCase().includes(keyword);
-    });
+    const where: Prisma.ProductCategoryWhereInput = {
+      ...(filters.disabled !== undefined ? { disabled: filters.disabled } : {}),
+      ...(keywordRaw.length > 0
+        ? {
+            OR: [
+              { name: { contains: keywordRaw, mode: "insensitive" } },
+              { id: { contains: keywordRaw, mode: "insensitive" } }
+            ]
+          }
+        : {})
+    };
 
-    const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.productCategory.count({ where }),
+      this.prisma.productCategory.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      })
+    ]);
 
     return {
       code: 0,
       message: "ok",
       data: {
-        items,
-        total: filtered.length
+        items: rows.map(mapRowToCategory),
+        total
       }
     };
   }
 
-  public createCategory(body: CreateCategoryRequest): ApiEnvelope<ProductCategory> {
+  public async createCategory(body: CreateCategoryRequest): Promise<ApiEnvelope<ProductCategory>> {
     const name = body.name.trim();
     const createdBy = body.createdBy.trim();
     if (!name) return { code: 400, message: "name is required", data: null };
     if (!createdBy) return { code: 400, message: "createdBy is required", data: null };
 
-    const category: ProductCategory = {
-      id: createCategoryId(),
-      name,
-      disabled: false,
-      createdAt: new Date().toISOString().slice(0, 10),
-      createdBy
-    };
-    this.categories.unshift(category);
+    let id = "";
+    for (let i = 0; i < 8; i += 1) {
+      const candidate = createCategoryId();
+      const hit = await this.prisma.productCategory.findUnique({ where: { id: candidate } });
+      if (!hit) {
+        id = candidate;
+        break;
+      }
+    }
+    if (!id) {
+      id = createCategoryId();
+    }
 
-    return { code: 0, message: "ok", data: category };
+    const row = await this.prisma.productCategory.create({
+      data: { id, name, disabled: false, createdBy }
+    });
+
+    return { code: 0, message: "ok", data: mapRowToCategory(row) };
   }
 
-  public getCategory(id: string): ApiEnvelope<ProductCategory> {
-    const found = this.categories.find((item) => item.id === id) ?? null;
-    if (!found) return { code: 404, message: "category not found", data: null };
-    return { code: 0, message: "ok", data: found };
+  public async getCategory(id: string): Promise<ApiEnvelope<ProductCategory>> {
+    const row = await this.prisma.productCategory.findUnique({ where: { id } });
+    if (!row) return { code: 404, message: "category not found", data: null };
+    return { code: 0, message: "ok", data: mapRowToCategory(row) };
   }
 
-  public updateCategory(id: string, body: UpdateCategoryRequest): ApiEnvelope<ProductCategory> {
+  public async updateCategory(
+    id: string,
+    body: UpdateCategoryRequest
+  ): Promise<ApiEnvelope<ProductCategory>> {
     const name = body.name.trim();
     if (!name) return { code: 400, message: "name is required", data: null };
-    const index = this.categories.findIndex((item) => item.id === id);
-    if (index < 0) return { code: 404, message: "category not found", data: null };
 
-    const current = this.categories[index];
-    const next: ProductCategory = {
-      ...current,
-      name
-    };
-    this.categories[index] = next;
-    return { code: 0, message: "ok", data: next };
+    try {
+      const row = await this.prisma.productCategory.update({
+        where: { id },
+        data: { name }
+      });
+      return { code: 0, message: "ok", data: mapRowToCategory(row) };
+    } catch {
+      return { code: 404, message: "category not found", data: null };
+    }
   }
 
-  public disableCategory(id: string): ApiEnvelope<{ success: true }> {
-    const index = this.categories.findIndex((item) => item.id === id);
-    if (index < 0) return { code: 404, message: "category not found", data: null };
-    this.categories[index] = { ...this.categories[index], disabled: true };
-    return { code: 0, message: "ok", data: { success: true } };
+  public async disableCategory(id: string): Promise<ApiEnvelope<{ success: true }>> {
+    try {
+      await this.prisma.productCategory.update({ where: { id }, data: { disabled: true } });
+      return { code: 0, message: "ok", data: { success: true } };
+    } catch {
+      return { code: 404, message: "category not found", data: null };
+    }
   }
 
-  public enableCategory(id: string): ApiEnvelope<{ success: true }> {
-    const index = this.categories.findIndex((item) => item.id === id);
-    if (index < 0) return { code: 404, message: "category not found", data: null };
-    this.categories[index] = { ...this.categories[index], disabled: false };
-    return { code: 0, message: "ok", data: { success: true } };
+  public async enableCategory(id: string): Promise<ApiEnvelope<{ success: true }>> {
+    try {
+      await this.prisma.productCategory.update({ where: { id }, data: { disabled: false } });
+      return { code: 0, message: "ok", data: { success: true } };
+    } catch {
+      return { code: 404, message: "category not found", data: null };
+    }
   }
 }

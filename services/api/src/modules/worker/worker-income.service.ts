@@ -129,8 +129,11 @@ const incomeEligible = (o: Order): boolean =>
 export class WorkerIncomeService {
   constructor(private readonly orderService: OrderService) {}
 
-  public listMonthBuckets(workerId: string): ApiEnvelope<{ months: WorkerIncomeMonthBucketDto[] }> {
-    const orders = this.orderService.findOrdersAssignedToWorker(workerId).filter(incomeEligible);
+  public async listMonthBuckets(
+    workerId: string
+  ): Promise<ApiEnvelope<{ months: WorkerIncomeMonthBucketDto[] }>> {
+    const assigned = await this.orderService.findOrdersAssignedToWorker(workerId);
+    const orders = assigned.filter(incomeEligible);
     const map = new Map<string, { total: number; count: number }>();
 
     for (const o of orders) {
@@ -156,9 +159,13 @@ export class WorkerIncomeService {
     return { code: 0, message: "ok", data: { months } };
   }
 
-  public getSummary(workerId: string, yearMonth?: string): ApiEnvelope<WorkerIncomeSummaryDto> {
+  public async getSummary(
+    workerId: string,
+    yearMonth?: string
+  ): Promise<ApiEnvelope<WorkerIncomeSummaryDto>> {
     const ym = (yearMonth ?? "").trim() || currentYearMonth();
-    const orders = this.orderService.findOrdersAssignedToWorker(workerId).filter(incomeEligible);
+    const assigned = await this.orderService.findOrdersAssignedToWorker(workerId);
+    const orders = assigned.filter(incomeEligible);
 
     let settledTotal = 0;
     let settledOrderCount = 0;
@@ -218,16 +225,17 @@ export class WorkerIncomeService {
     return { code: 0, message: "ok", data: summary };
   }
 
-  public listLedger(
+  public async listLedger(
     workerId: string,
     filters: { yearMonth?: string; keyword?: string; page?: number; pageSize?: number }
-  ): ApiEnvelope<{ items: WorkerIncomeLedgerItemDto[]; total: number }> {
+  ): Promise<ApiEnvelope<{ items: WorkerIncomeLedgerItemDto[]; total: number }>> {
     const ymFilter = (filters.yearMonth ?? "").trim();
     const keyword = (filters.keyword ?? "").trim().toLowerCase();
     const pageSize = Math.max(1, Math.min(50, Math.floor(filters.pageSize ?? 20)));
     const page = Math.max(1, Math.floor(filters.page ?? 1));
 
-    let list = this.orderService.findOrdersAssignedToWorker(workerId).filter(incomeEligible);
+    const assigned = await this.orderService.findOrdersAssignedToWorker(workerId);
+    let list = assigned.filter(incomeEligible);
 
     if (ymFilter) {
       list = list.filter((o) => orderLedgerYearMonth(o) === ymFilter);
@@ -250,12 +258,15 @@ export class WorkerIncomeService {
     return { code: 0, message: "ok", data: { items, total } };
   }
 
-  public getLedgerDetail(workerId: string, orderId: string): ApiEnvelope<WorkerIncomeDetailDto> {
+  public async getLedgerDetail(
+    workerId: string,
+    orderId: string
+  ): Promise<ApiEnvelope<WorkerIncomeDetailDto>> {
     const trimmed = orderId.trim();
     if (!trimmed) return { code: 400, message: "orderId is required", data: null };
 
-    const orders = this.orderService.findOrdersAssignedToWorker(workerId);
-    const order = orders.find((o) => o.id === trimmed) ?? null;
+    const assigned = await this.orderService.findOrdersAssignedToWorker(workerId);
+    const order = assigned.find((o) => o.id === trimmed) ?? null;
     if (!order) return { code: 404, message: "order not found", data: null };
     if (!incomeEligible(order)) {
       return { code: 400, message: "order has no income record", data: null };

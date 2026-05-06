@@ -1,4 +1,8 @@
 import { Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
+import { CatalogProductStatus } from "@prisma/client";
+import { decimalLikeToNumber } from "../../lib/decimal-like";
+import { PrismaService } from "../../prisma/prisma.service";
 import { Product, type ProductNotice, ProductStatus } from "./product.types";
 
 type ApiEnvelope<T> =
@@ -44,22 +48,22 @@ type UpdateProductRequest = {
   notices?: ProductNotice[];
 };
 
-const normalizeKeyword = (value: string | undefined) => {
+const normalizeKeyword = (value: string | undefined): string => {
   return (value ?? "").trim().toLowerCase();
 };
 
-const createProductId = () => {
+const createProductId = (): string => {
   return `P-${Math.floor(10000 + Math.random() * 90000)}`;
 };
 
-const normalizePrice = (value: unknown) => {
+const normalizePrice = (value: unknown): number | null => {
   const num = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(num)) return null;
   if (num <= 0) return null;
   return Math.round(num * 100) / 100;
 };
 
-const normalizeOptionalPrice = (value: unknown) => {
+const normalizeOptionalPrice = (value: unknown): number | null => {
   if (value === null || value === undefined || value === "") return null;
   const num = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(num)) return null;
@@ -67,7 +71,7 @@ const normalizeOptionalPrice = (value: unknown) => {
   return Math.round(num * 100) / 100;
 };
 
-const normalizeStringArray = (value: unknown) => {
+const normalizeStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value
     .map((item) => (typeof item === "string" ? item.trim() : ""))
@@ -90,86 +94,98 @@ const normalizeNotices = (value: unknown): ProductNotice[] => {
     .filter((item): item is ProductNotice => Boolean(item));
 };
 
+const parseNoticesJson = (raw: Prisma.JsonValue): ProductNotice[] => {
+  return normalizeNotices(raw);
+};
+
+const statusToApi = (s: CatalogProductStatus): ProductStatus =>
+  s === CatalogProductStatus.enabled ? "enabled" : "disabled";
+
+const statusToDb = (s: ProductStatus): CatalogProductStatus =>
+  s === "enabled" ? CatalogProductStatus.enabled : CatalogProductStatus.disabled;
+
+const mapRowToProduct = (row: {
+  id: string;
+  name: string;
+  imageUrl: string;
+  heroImages: string[];
+  titleAccent: string;
+  categoryId: string;
+  categoryName: string;
+  price: unknown;
+  originPrice: unknown | null;
+  stockText: string;
+  badges: string[];
+  descriptionLines: string[];
+  notices: Prisma.JsonValue;
+  status: CatalogProductStatus;
+  createdAt: Date;
+  createdBy: string;
+}): Product => ({
+  id: row.id,
+  name: row.name,
+  imageUrl: row.imageUrl,
+  heroImages: row.heroImages,
+  titleAccent: row.titleAccent,
+  categoryId: row.categoryId,
+  categoryName: row.categoryName,
+  price: decimalLikeToNumber(row.price),
+  originPrice: row.originPrice === null ? null : decimalLikeToNumber(row.originPrice),
+  stockText: row.stockText,
+  badges: row.badges,
+  descriptionLines: row.descriptionLines,
+  notices: parseNoticesJson(row.notices),
+  status: statusToApi(row.status),
+  createdAt: row.createdAt.toISOString().slice(0, 10),
+  createdBy: row.createdBy
+});
+
 @Injectable()
 export class ProductService {
-  private readonly products: Product[] = [];
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor() {
-    const allowSeed = process.env.SEED_DEMO === "true" || process.env.NODE_ENV !== "production";
-    if (!allowSeed) return;
-    // dev seed：默认上架 1 个商品，便于小程序联调（分类页 + 详情页）
-    this.products.push({
-      id: "P-10001",
-      name: "绝密保底400-1000万！",
-      imageUrl:
-        "https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=1200&q=80",
-      heroImages: [
-        "https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1542751110-97427bbecf20?auto=format&fit=crop&w=1200&q=80",
-        "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80"
-      ],
-      titleAccent: "赠送转盘",
-      categoryId: "PC-1002",
-      categoryName: "保底类",
-      price: 69.9,
-      originPrice: 128,
-      stockText: "LIMITED STOCK",
-      badges: ["极速接单", "极速响应", "服务至上", "官方严选"],
-      descriptionLines: [
-        "必须打绝密并且保底400-1000万！（地图由打手选择）",
-        "可单护可双护根据打手情况来。",
-        "专业打手，稳定产出，极速回款。"
-      ],
-      notices: [
-        {
-          id: "notice-1",
-          level: "error",
-          text: "未成年禁止下单。本店严格执行国家未成年人防沉迷相关规定。"
-        },
-        {
-          id: "notice-2",
-          level: "error",
-          text: "拒绝卡保底行为。一经发现，立即终止服务且不予退款。"
-        },
-        {
-          id: "notice-3",
-          level: "info",
-          text: "服务过程中请勿顶号，否则造成的损失由买家自行承担。"
-        }
-      ],
-      status: "enabled",
-      createdAt: "2026-04-24",
-      createdBy: "seed"
-    });
-  }
-
-  public listProducts(filters: ListFilters): ApiEnvelope<{ items: Product[]; total: number }> {
+  public async listProducts(
+    filters: ListFilters
+  ): Promise<ApiEnvelope<{ items: Product[]; total: number }>> {
     const keyword = normalizeKeyword(filters.name);
     const categoryId = (filters.categoryId ?? "").trim();
     const pageSize = Math.max(1, Math.min(100, Math.floor(filters.pageSize ?? 10)));
     const page = Math.max(1, Math.floor(filters.page ?? 1));
 
-    const filtered = this.products.filter((item) => {
-      if (filters.status && item.status !== filters.status) return false;
-      if (categoryId && item.categoryId !== categoryId) return false;
-      if (!keyword) return true;
-      return item.name.toLowerCase().includes(keyword) || item.id.toLowerCase().includes(keyword);
-    });
+    const where: Prisma.ProductWhereInput = {
+      ...(filters.status ? { status: statusToDb(filters.status) } : {}),
+      ...(categoryId ? { categoryId } : {}),
+      ...(keyword.length > 0
+        ? {
+            OR: [
+              { name: { contains: keyword, mode: "insensitive" } },
+              { id: { contains: keyword, mode: "insensitive" } }
+            ]
+          }
+        : {})
+    };
 
-    const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.product.count({ where }),
+      this.prisma.product.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      })
+    ]);
 
     return {
       code: 0,
       message: "ok",
       data: {
-        items,
-        total: filtered.length
+        items: rows.map(mapRowToProduct),
+        total
       }
     };
   }
 
-  public createProduct(body: CreateProductRequest): ApiEnvelope<Product> {
+  public async createProduct(body: CreateProductRequest): Promise<ApiEnvelope<Product>> {
     const name = body.name.trim();
     const imageUrl = body.imageUrl.trim();
     const heroImages = normalizeStringArray(body.heroImages);
@@ -193,40 +209,57 @@ export class ProductService {
     if (!createdBy) return { code: 400, message: "createdBy is required", data: null };
     if (!price) return { code: 400, message: "price is invalid", data: null };
 
-    const product: Product = {
-      id: createProductId(),
-      name,
-      imageUrl,
-      heroImages,
-      titleAccent,
-      categoryId,
-      categoryName,
-      price,
-      originPrice,
-      stockText,
-      badges,
-      descriptionLines,
-      notices,
-      status: "enabled",
-      createdAt: new Date().toISOString().slice(0, 10),
-      createdBy
-    };
+    const cat = await this.prisma.productCategory.findUnique({ where: { id: categoryId } });
+    if (!cat || cat.disabled) {
+      return { code: 400, message: "category not found or disabled", data: null };
+    }
 
-    this.products.unshift(product);
+    let id = "";
+    for (let i = 0; i < 8; i += 1) {
+      const candidate = createProductId();
+      const hit = await this.prisma.product.findUnique({ where: { id: candidate } });
+      if (!hit) {
+        id = candidate;
+        break;
+      }
+    }
+    if (!id) id = createProductId();
 
-    return { code: 0, message: "ok", data: product };
+    const noticesJson = notices as unknown as Prisma.InputJsonValue;
+
+    const row = await this.prisma.product.create({
+      data: {
+        id,
+        name,
+        imageUrl,
+        heroImages,
+        titleAccent,
+        categoryId,
+        categoryName,
+        price,
+        originPrice,
+        stockText,
+        badges,
+        descriptionLines,
+        notices: noticesJson,
+        status: CatalogProductStatus.enabled,
+        createdBy
+      }
+    });
+
+    return { code: 0, message: "ok", data: mapRowToProduct(row) };
   }
 
-  public getProduct(id: string): ApiEnvelope<Product> {
-    const found = this.products.find((item) => item.id === id) ?? null;
-    if (!found) return { code: 404, message: "product not found", data: null };
-    return { code: 0, message: "ok", data: found };
+  public async getProduct(id: string): Promise<ApiEnvelope<Product>> {
+    const row = await this.prisma.product.findUnique({ where: { id } });
+    if (!row) return { code: 404, message: "product not found", data: null };
+    return { code: 0, message: "ok", data: mapRowToProduct(row) };
   }
 
-  public updateProduct(id: string, body: UpdateProductRequest): ApiEnvelope<Product> {
-    const index = this.products.findIndex((item) => item.id === id);
-    if (index < 0) return { code: 404, message: "product not found", data: null };
-
+  public async updateProduct(
+    id: string,
+    body: UpdateProductRequest
+  ): Promise<ApiEnvelope<Product>> {
     const name = body.name.trim();
     const imageUrl = body.imageUrl.trim();
     const heroImages = normalizeStringArray(body.heroImages);
@@ -248,37 +281,56 @@ export class ProductService {
     if (!categoryName) return { code: 400, message: "categoryName is required", data: null };
     if (!price) return { code: 400, message: "price is invalid", data: null };
 
-    const current = this.products[index];
-    const next: Product = {
-      ...current,
-      name,
-      imageUrl,
-      heroImages,
-      titleAccent,
-      categoryId,
-      categoryName,
-      price,
-      originPrice,
-      stockText,
-      badges,
-      descriptionLines,
-      notices
-    };
-    this.products[index] = next;
-    return { code: 0, message: "ok", data: next };
+    const cat = await this.prisma.productCategory.findUnique({ where: { id: categoryId } });
+    if (!cat || cat.disabled) {
+      return { code: 400, message: "category not found or disabled", data: null };
+    }
+
+    try {
+      const row = await this.prisma.product.update({
+        where: { id },
+        data: {
+          name,
+          imageUrl,
+          heroImages,
+          titleAccent,
+          categoryId,
+          categoryName,
+          price,
+          originPrice,
+          stockText,
+          badges,
+          descriptionLines,
+          notices: notices as unknown as Prisma.InputJsonValue
+        }
+      });
+      return { code: 0, message: "ok", data: mapRowToProduct(row) };
+    } catch {
+      return { code: 404, message: "product not found", data: null };
+    }
   }
 
-  public disableProduct(id: string): ApiEnvelope<{ success: true }> {
-    const index = this.products.findIndex((item) => item.id === id);
-    if (index < 0) return { code: 404, message: "product not found", data: null };
-    this.products[index] = { ...this.products[index], status: "disabled" };
-    return { code: 0, message: "ok", data: { success: true } };
+  public async disableProduct(id: string): Promise<ApiEnvelope<{ success: true }>> {
+    try {
+      await this.prisma.product.update({
+        where: { id },
+        data: { status: CatalogProductStatus.disabled }
+      });
+      return { code: 0, message: "ok", data: { success: true } };
+    } catch {
+      return { code: 404, message: "product not found", data: null };
+    }
   }
 
-  public enableProduct(id: string): ApiEnvelope<{ success: true }> {
-    const index = this.products.findIndex((item) => item.id === id);
-    if (index < 0) return { code: 404, message: "product not found", data: null };
-    this.products[index] = { ...this.products[index], status: "enabled" };
-    return { code: 0, message: "ok", data: { success: true } };
+  public async enableProduct(id: string): Promise<ApiEnvelope<{ success: true }>> {
+    try {
+      await this.prisma.product.update({
+        where: { id },
+        data: { status: CatalogProductStatus.enabled }
+      });
+      return { code: 0, message: "ok", data: { success: true } };
+    } catch {
+      return { code: 404, message: "product not found", data: null };
+    }
   }
 }
