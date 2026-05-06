@@ -103,7 +103,7 @@ export const AdminManagementPage = () => {
         setSubmitLoading(true);
 
         if (drawerMode === "create") {
-          const passwordHash = await sha256Hex(values.password);
+          const passwordHash = sha256Hex(values.password);
           await requestCreateAdminManager(accessToken, {
             name: values.name.trim(),
             username: values.username.trim(),
@@ -115,7 +115,7 @@ export const AdminManagementPage = () => {
             name: values.name.trim()
           };
           if (values.password.trim()) {
-            updatePayload.passwordHash = await sha256Hex(values.password);
+            updatePayload.passwordHash = sha256Hex(values.password);
           }
           await requestUpdateAdminManager(accessToken, currentRow.id, updatePayload);
           message.success("管理员更新成功");

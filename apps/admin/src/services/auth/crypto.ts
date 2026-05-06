@@ -1,28 +1,16 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, utf8ToBytes } from "@noble/hashes/utils.js";
 
-const toHex = (buffer: ArrayBuffer) => {
-  return Array.from(new Uint8Array(buffer))
-    .map((part) => part.toString(16).padStart(2, "0"))
-    .join("");
-};
-
 /**
- * SHA-256(hex)。优先 WebCrypto（HTTPS / localhost）；在「非安全上下文」的 HTTP（如局域网 IP）
- * 下 `crypto.subtle` 不可用，改用 @noble/hashes。
+ * SHA-256(hex)。管理端需在 HTTP/IP、内嵌 WebView 等「非安全上下文」下也可用，
+ * 故统一用 @noble/hashes（不依赖 `crypto.subtle`，避免 `digest` of undefined）。
  */
-export const sha256Hex = async (value: string): Promise<string> => {
-  const subtle = globalThis.crypto?.subtle;
-  if (subtle && typeof subtle.digest === "function") {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(value);
-    const digest = await subtle.digest("SHA-256", data);
-    return toHex(digest);
-  }
+export const sha256Hex = (value: string): string => {
   return bytesToHex(sha256(utf8ToBytes(value)));
 };
 
-export const buildPasswordProof = async (password: string, nonce: string) => {
-  const passwordHash = await sha256Hex(password);
+/** proof = SHA256(SHA256(密码"."hex) + "." + nonce) — 与服务端校验一致 */
+export const buildPasswordProof = (password: string, nonce: string): string => {
+  const passwordHash = sha256Hex(password);
   return sha256Hex(`${passwordHash}.${nonce}`);
 };

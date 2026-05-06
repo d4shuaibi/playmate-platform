@@ -38,7 +38,7 @@ export const LoginPage = () => {
     void (async () => {
       try {
         const challenge = await requestAdminChallenge(values.username);
-        const proof = await buildPasswordProof(values.password, challenge.nonce);
+        const proof = buildPasswordProof(values.password, challenge.nonce);
         const authData = await requestAdminLogin({
           username: values.username,
           challengeId: challenge.challengeId,
