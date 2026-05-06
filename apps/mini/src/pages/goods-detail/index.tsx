@@ -5,6 +5,7 @@ import "./index.scss";
 import { fetchMiniProductDetail } from "../../services/products";
 import { createMiniOrder } from "../../services/orders";
 import { getToken } from "../../utils/session";
+import { isFavoriteProductId, toggleFavoriteProductId } from "../../utils/product-favorites";
 
 const GoodsDetailPage = () => {
   const router = useMemo(() => Taro.getCurrentInstance().router, []);
@@ -23,6 +24,13 @@ const GoodsDetailPage = () => {
     descriptionLines: string[];
     notices: Array<{ id: string; level: "warn" | "error" | "info"; text: string }>;
   } | null>(null);
+
+  useEffect(() => {
+    if (!productId) {
+      return;
+    }
+    setIsFavorite(isFavoriteProductId(productId));
+  }, [productId]);
 
   useEffect(() => {
     void (async () => {
@@ -52,8 +60,15 @@ const GoodsDetailPage = () => {
   }, [productId]);
 
   const handleToggleFavorite = () => {
-    // TODO(backend): 接入收藏/取消收藏接口，返回真实收藏状态
-    setIsFavorite((prevState) => !prevState);
+    if (!productId) {
+      return;
+    }
+    const nextFavorite = toggleFavoriteProductId(productId);
+    setIsFavorite(nextFavorite);
+    void Taro.showToast({
+      title: nextFavorite ? "已收藏" : "已取消收藏",
+      icon: "none"
+    });
   };
 
   const handleContactService = () => {

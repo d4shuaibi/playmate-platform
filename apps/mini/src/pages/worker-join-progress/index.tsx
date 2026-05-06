@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import "./index.scss";
 import { fetchWorkerJoinProgress } from "../../services";
 import { getToken } from "../../utils/session";
+import { setRole, setWorkerPermission } from "../../utils/role";
 
 type JoinProgressStatus = "submitted" | "reviewing" | "approved" | "rejected";
 
@@ -25,10 +26,26 @@ type JoinProgressDetail = {
   rejectReason?: string;
 };
 
+/** 将接口 ISO 时间格式化为展示文案 */
+const formatTimelineTimestamp = (iso: string | undefined, label: string): string | undefined => {
+  if (!iso) {
+    return undefined;
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const text = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${label}：${text}`;
+};
+
 const buildDetail = (
   status: JoinProgressStatus,
   refNo: string,
-  rejectReason?: string
+  rejectReason?: string,
+  createdAt?: string,
+  updatedAt?: string
 ): JoinProgressDetail => {
   const base: JoinProgressDetail = {
     refNo,
@@ -39,28 +56,40 @@ const buildDetail = (
     rejectReason
   };
 
+  const submittedStamp = formatTimelineTimestamp(createdAt, "提交时间");
+
   const stepSubmitted: JoinProgressStep = {
     key: "submitted",
     title: "资料已提交",
     subtitle: "Application Submitted",
-    timestampText: "TIMESTAMP: 2026-04-13 14:32:10",
+    timestampText: submittedStamp ?? undefined,
     state: "done"
   };
+
+  const reviewingStamp =
+    status === "reviewing" ? formatTimelineTimestamp(updatedAt, "进度更新") : undefined;
 
   const stepReviewing: JoinProgressStep = {
     key: "reviewing",
     title: "正在审核",
     subtitle: "Under Review - Active State",
     state: status === "reviewing" ? "active" : status === "submitted" ? "todo" : "done",
+    timestampText: reviewingStamp,
     hintText:
       status === "reviewing" ? "平台正在核验你的身份与游戏能力数据，请保持手机畅通。" : undefined
   };
+
+  const finalStamp =
+    status === "approved" || status === "rejected"
+      ? formatTimelineTimestamp(updatedAt, "结果时间")
+      : undefined;
 
   const stepFinal: JoinProgressStep = {
     key: "final",
     title: "审核结果",
     subtitle: "Final Result",
     state: status === "approved" ? "done" : status === "rejected" ? "failed" : "todo",
+    timestampText: finalStamp,
     hintText:
       status === "approved"
         ? "恭喜通过审核，你已获得打手端权限。"
@@ -92,10 +121,12 @@ const WorkerJoinProgressPage = () => {
   const [runtimeStatus, setRuntimeStatus] = useState<JoinProgressStatus>(statusFromRoute);
   const [refNo, setRefNo] = useState<string>(refNoFromRoute);
   const [rejectReason, setRejectReason] = useState<string | undefined>(undefined);
+  const [createdAt, setCreatedAt] = useState<string | undefined>(undefined);
+  const [updatedAt, setUpdatedAt] = useState<string | undefined>(undefined);
 
   const detail = useMemo(
-    () => buildDetail(runtimeStatus, refNo || "—", rejectReason),
-    [runtimeStatus, refNo, rejectReason]
+    () => buildDetail(runtimeStatus, refNo || "—", rejectReason, createdAt, updatedAt),
+    [runtimeStatus, refNo, rejectReason, createdAt, updatedAt]
   );
 
   const handleLoad = () => {
@@ -107,6 +138,8 @@ const WorkerJoinProgressPage = () => {
         setRuntimeStatus(data.status);
         setRefNo(data.refNo);
         setRejectReason(data.rejectReason);
+        setCreatedAt(data.createdAt);
+        setUpdatedAt(data.updatedAt);
       } catch (error) {
         void Taro.showToast({
           title: error instanceof Error ? error.message : "加载进度失败",
@@ -131,7 +164,9 @@ const WorkerJoinProgressPage = () => {
 
   const handlePrimaryAction = () => {
     if (detail.status === "approved") {
-      void Taro.showToast({ title: "审核已通过，请在“我的”切换到打手端", icon: "none" });
+      setRole("worker");
+      setWorkerPermission(true);
+      void Taro.redirectTo({ url: "/pages/home-worker/index" });
       return;
     }
     if (detail.status === "rejected") {

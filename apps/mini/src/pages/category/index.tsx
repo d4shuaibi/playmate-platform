@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Input } from "@tarojs/components";
-import Taro from "@tarojs/taro";
-import { useEffect, useMemo, useState } from "react";
+import Taro, { useDidShow } from "@tarojs/taro";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
 import { getRole } from "../../utils/role";
@@ -18,6 +18,7 @@ type ServiceCard = {
 
 const CategoryPage = () => {
   const role = getRole();
+  const categoriesRef = useRef<ServiceCategory[]>([]);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [services, setServices] = useState<ServiceCard[]>([]);
   const [activeCategoryKey, setActiveCategoryKey] = useState<string>("");
@@ -33,8 +34,19 @@ const CategoryPage = () => {
           subtitle: item.name
         }));
         setCategories(nextCats);
-        if (nextCats.length > 0) {
-          setActiveCategoryKey(nextCats[0].key);
+        categoriesRef.current = nextCats;
+        const routeParams = Taro.getCurrentInstance().router?.params ?? {};
+        const routeCat = String(routeParams.categoryId ?? "").trim();
+        const routeKw = String(routeParams.keyword ?? "").trim();
+        let nextActive = nextCats[0]?.key ?? "";
+        if (routeCat && nextCats.some((c) => c.key === routeCat)) {
+          nextActive = routeCat;
+        }
+        if (nextActive) {
+          setActiveCategoryKey(nextActive);
+        }
+        if (routeKw) {
+          setKeyword(routeKw);
         }
       } catch (error) {
         void Taro.showToast({
@@ -44,6 +56,24 @@ const CategoryPage = () => {
       }
     })();
   }, []);
+
+  useDidShow(() => {
+    const routeParams = Taro.getCurrentInstance().router?.params ?? {};
+    if (routeParams.keyword !== undefined) {
+      setKeyword(String(routeParams.keyword ?? "").trim());
+    }
+    if (routeParams.categoryId !== undefined) {
+      const routeCat = String(routeParams.categoryId ?? "").trim();
+      const list = categoriesRef.current;
+      if (routeCat && list.some((c) => c.key === routeCat)) {
+        setActiveCategoryKey(routeCat);
+      }
+    }
+  });
+
+  useEffect(() => {
+    categoriesRef.current = categories;
+  }, [categories]);
 
   useEffect(() => {
     void (async () => {
@@ -77,8 +107,12 @@ const CategoryPage = () => {
   );
 
   const visibleServices = useMemo(() => {
+    const trimmedKeyword = keyword.trim();
+    if (trimmedKeyword.length > 0) {
+      return services;
+    }
     return services.filter((s) => s.categoryKey === activeCategoryKey);
-  }, [activeCategoryKey, services]);
+  }, [activeCategoryKey, keyword, services]);
 
   const handleBuy = (service: ServiceCard) => {
     void Taro.navigateTo({ url: `/pages/goods-detail/index?id=${encodeURIComponent(service.id)}` });

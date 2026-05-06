@@ -1,4 +1,4 @@
-import { View, Text, Swiper, SwiperItem, ScrollView } from "@tarojs/components";
+import { View, Text, Swiper, SwiperItem, ScrollView, Input } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import { Notice, Search, Star, HeartFill } from "@nutui/icons-react-taro";
 import React, { useEffect, useMemo, useState } from "react";
@@ -70,6 +70,8 @@ const UserHomePage = () => {
   const [activeTypeKey, setActiveTypeKey] = useState<string>("all");
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [loginOpen, setLoginOpen] = useState(false);
+  /** 搜索框草稿，确认后跳转分类页并带上 keyword / categoryId */
+  const [searchDraft, setSearchDraft] = useState("");
 
   useEffect(() => {
     void (async () => {
@@ -142,6 +144,30 @@ const UserHomePage = () => {
     setActiveTypeKey(typeKey);
   };
 
+  /** 构造分类页路径，与列表筛选参数一致 */
+  const buildCategoryListUrl = () => {
+    const query = new URLSearchParams();
+    const trimmedKeyword = searchDraft.trim();
+    if (trimmedKeyword.length > 0) {
+      query.set("keyword", trimmedKeyword);
+    }
+    if (activeTypeKey !== "all") {
+      query.set("categoryId", activeTypeKey);
+    }
+    const queryString = query.toString();
+    return queryString.length > 0
+      ? `/pages/category/index?${queryString}`
+      : "/pages/category/index";
+  };
+
+  const handleSearchConfirm = () => {
+    void Taro.navigateTo({ url: buildCategoryListUrl() });
+  };
+
+  const handleViewAllServices = () => {
+    void Taro.navigateTo({ url: buildCategoryListUrl() });
+  };
+
   const handleServiceCardClick = (serviceId: string) => {
     if (!getToken()) {
       setLoginOpen(true);
@@ -167,9 +193,18 @@ const UserHomePage = () => {
           </View>
         </View>
 
-        <View className="userHome__search">
+        <View className="userHome__search" aria-label="搜索服务">
           <Search className="userHome__searchIcon" />
-          <Text className="userHome__searchPlaceholder">搜索精英代练服务...</Text>
+          <Input
+            className="userHome__searchInput"
+            type="text"
+            confirmType="search"
+            value={searchDraft}
+            placeholder="搜索精英代练服务..."
+            placeholderClass="userHome__searchPlaceholder"
+            onInput={(event) => setSearchDraft(String(event.detail.value ?? ""))}
+            onConfirm={handleSearchConfirm}
+          />
         </View>
       </View>
 
@@ -242,7 +277,14 @@ const UserHomePage = () => {
 
         <View className="userHome__sectionHeader">
           <Text className="userHome__sectionTitle">精英服务</Text>
-          <Text className="userHome__sectionAction">查看全部</Text>
+          <View
+            className="userHome__sectionAction"
+            onClick={handleViewAllServices}
+            role="button"
+            aria-label="查看全部服务"
+          >
+            <Text className="userHome__sectionActionText">查看全部</Text>
+          </View>
         </View>
 
         <ScrollView className="userHome__tabsScroll" scrollX enhanced showScrollbar={false}>
