@@ -205,6 +205,31 @@ model WorkerAccount {
   @@index([status])
 }
 
+enum AdminManagerRole {
+  admin
+  customer_service
+}
+
+enum AdminAccountStatus {
+  active
+  disabled
+}
+
+/// 老板在后台创建的管理员账号（owner 账号硬编码在服务里，不入库）
+model AdminAccount {
+  id           String             @id @default(cuid())
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  username     String             @unique
+  displayName  String
+  passwordHash String
+  role         AdminManagerRole   @default(admin)
+  status       AdminAccountStatus @default(active)
+
+  @@index([status])
+}
+
 model BizOrder {
   id        String   @id
   createdAt DateTime @default(now())

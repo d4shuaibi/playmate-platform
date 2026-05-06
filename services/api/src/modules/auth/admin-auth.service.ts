@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "crypto";
 import jwt from "jsonwebtoken";
+import { PrismaService } from "../../prisma/prisma.service";
 import {
   type AdminAccessPayload,
   type AdminAccount,
@@ -117,10 +118,6 @@ const normalizeUsername = (username: string) => {
   return username.trim().toLowerCase();
 };
 
-const createManagerId = () => {
-  return `AM-${Math.floor(1000 + Math.random() * 9000)}`;
-};
-
 const isSha256Hex = (value: string) => {
   return /^[a-f0-9]{64}$/.test(value);
 };
@@ -143,24 +140,30 @@ export class AdminAuthService {
 
   private readonly challenges = new Map<string, ChallengeRecord>();
   private readonly refreshTokens = new Map<string, RefreshRecord>();
-  private readonly accounts: AdminAccount[] = this.loadAccountsFromEnv();
-  private readonly authConfigured = this.accounts.length > 0;
 
-  private loadAccountsFromEnv(): AdminAccount[] {
+  // owner 账号硬编码（不入库），manager 账号存数据库
+  private readonly ownerAccounts: AdminAccount[] = this.loadOwnerAccountsFromEnv();
+  private readonly authConfigured = this.ownerAccounts.length > 0;
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  private loadOwnerAccountsFromEnv(): AdminAccount[] {
     const envRaw = process.env.ADMIN_AUTH_ACCOUNTS_JSON?.trim();
     if (envRaw) {
       try {
         const parsed = JSON.parse(envRaw) as AdminAccount[];
-        return parsed.map((item) => ({
-          id: item.id?.trim() || createManagerId(),
-          username: normalizeUsername(item.username),
-          displayName: item.displayName?.trim() || item.username,
-          passwordHash: item.passwordHash?.trim().toLowerCase(),
-          role: item.role,
-          permissions: item.permissions ?? [],
-          status: item.status ?? "active",
-          createdAt: item.createdAt ?? new Date().toISOString().slice(0, 10)
-        }));
+        return parsed
+          .filter((item) => item.role === "owner")
+          .map((item) => ({
+            id: item.id?.trim() || "OWN-ENV",
+            username: normalizeUsername(item.username),
+            displayName: item.displayName?.trim() || item.username,
+            passwordHash: item.passwordHash?.trim().toLowerCase(),
+            role: item.role,
+            permissions: this.resolveRolePermissions("owner"),
+            status: item.status ?? "active",
+            createdAt: item.createdAt ?? new Date().toISOString().slice(0, 10)
+          }));
       } catch {
         throw new Error("ADMIN_AUTH_ACCOUNTS_JSON is invalid JSON");
       }
@@ -251,9 +254,24 @@ export class AdminAuthService {
     }
   }
 
-  private findAccount(username: string) {
+  private async findAccount(username: string): Promise<AdminAccount | null> {
     const normalized = normalizeUsername(username);
-    return this.accounts.find((item) => item.username === normalized) ?? null;
+    // owner 账号优先（in-memory）
+    const owner = this.ownerAccounts.find((item) => item.username === normalized);
+    if (owner) return owner;
+    // manager 账号从数据库查
+    const row = await this.prisma.adminAccount.findUnique({ where: { username: normalized } });
+    if (!row) return null;
+    return {
+      id: row.id,
+      username: row.username,
+      displayName: row.displayName,
+      passwordHash: row.passwordHash,
+      role: row.role as AdminRole,
+      permissions: this.resolveRolePermissions(row.role as AdminRole),
+      status: row.status as "active" | "disabled",
+      createdAt: row.createdAt.toISOString().slice(0, 10)
+    };
   }
 
   private toProfile(account: AdminAccount): AdminAuthProfile {
@@ -341,7 +359,7 @@ export class AdminAuthService {
     };
   }
 
-  adminLogin(body: AdminLoginRequest): ApiEnvelope<AdminAuthResponseData> {
+  async adminLogin(body: AdminLoginRequest): Promise<ApiEnvelope<AdminAuthResponseData>> {
     const notConfigured = this.ensureConfigured();
     if (notConfigured) return notConfigured;
     this.cleanExpiredState();
@@ -358,7 +376,7 @@ export class AdminAuthService {
     }
     challenge.used = true;
 
-    const account = this.findAccount(username);
+    const account = await this.findAccount(username);
     if (!account) {
       return { code: 401, message: "Invalid username or password", data: null };
     }
@@ -383,7 +401,7 @@ export class AdminAuthService {
     };
   }
 
-  adminRefresh(body: AdminRefreshRequest): ApiEnvelope<AdminAuthResponseData> {
+  async adminRefresh(body: AdminRefreshRequest): Promise<ApiEnvelope<AdminAuthResponseData>> {
     const notConfigured = this.ensureConfigured();
     if (notConfigured) return notConfigured;
     this.cleanExpiredState();
@@ -403,7 +421,7 @@ export class AdminAuthService {
         return { code: 401, message: "Refresh token revoked or expired", data: null };
       }
 
-      const account = this.findAccount(record.username);
+      const account = await this.findAccount(record.username);
       if (!account) {
         return { code: 401, message: "Account not found", data: null };
       }
@@ -445,56 +463,59 @@ export class AdminAuthService {
     };
   }
 
-  listAdminManagers(
+  async listAdminManagers(
     filters: AdminManagerListFilters = {}
-  ): ApiEnvelope<{ items: AdminManagerItem[] }> {
+  ): Promise<ApiEnvelope<{ items: AdminManagerItem[] }>> {
     const notConfigured = this.ensureConfigured();
     if (notConfigured) return notConfigured;
-    const name = filters.name?.trim().toLowerCase() ?? "";
-    const status = filters.status;
+
+    const rows = await this.prisma.adminAccount.findMany({
+      where: {
+        ...(filters.name ? { displayName: { contains: filters.name, mode: "insensitive" } } : {}),
+        ...(filters.status ? { status: filters.status } : {})
+      },
+      orderBy: { createdAt: "asc" }
+    });
+
     return {
       code: 0,
       message: "ok",
       data: {
-        items: this.accounts
-          .filter((item) => item.role === "admin")
-          .filter((item) => {
-            const passName = name ? item.displayName.toLowerCase().includes(name) : true;
-            const passStatus = status ? item.status === status : true;
-            return passName && passStatus;
-          })
-          .map((item) => ({
-            id: item.id,
-            name: item.displayName,
-            username: item.username,
-            status: item.status,
-            createdAt: item.createdAt
-          }))
+        items: rows.map((row) => ({
+          id: row.id,
+          name: row.displayName,
+          username: row.username,
+          status: row.status as "active" | "disabled",
+          createdAt: row.createdAt.toISOString().slice(0, 10)
+        }))
       }
     };
   }
 
-  getAdminManager(id: string): ApiEnvelope<AdminManagerItem> {
+  async getAdminManager(id: string): Promise<ApiEnvelope<AdminManagerItem>> {
     const notConfigured = this.ensureConfigured();
     if (notConfigured) return notConfigured;
-    const manager = this.accounts.find((item) => item.id === id && item.role === "admin");
-    if (!manager) {
+
+    const row = await this.prisma.adminAccount.findUnique({ where: { id } });
+    if (!row) {
       return { code: 404, message: "Admin manager not found", data: null };
     }
     return {
       code: 0,
       message: "ok",
       data: {
-        id: manager.id,
-        name: manager.displayName,
-        username: manager.username,
-        status: manager.status,
-        createdAt: manager.createdAt
+        id: row.id,
+        name: row.displayName,
+        username: row.username,
+        status: row.status as "active" | "disabled",
+        createdAt: row.createdAt.toISOString().slice(0, 10)
       }
     };
   }
 
-  createAdminManager(body: AdminManagerCreateRequest): ApiEnvelope<AdminManagerItem> {
+  async createAdminManager(
+    body: AdminManagerCreateRequest
+  ): Promise<ApiEnvelope<AdminManagerItem>> {
     const notConfigured = this.ensureConfigured();
     if (notConfigured) return notConfigured;
 
@@ -507,87 +528,89 @@ export class AdminAuthService {
     if (!isSha256Hex(passwordHash)) {
       return { code: 400, message: "Invalid password hash", data: null };
     }
-    if (this.findAccount(username)) {
+    if (await this.findAccount(username)) {
       return { code: 409, message: "Username already exists", data: null };
     }
 
-    const manager: AdminAccount = {
-      id: createManagerId(),
-      username,
-      displayName: name,
-      passwordHash,
-      role: "admin",
-      permissions: this.resolveRolePermissions("admin"),
-      status: "active",
-      createdAt: new Date().toISOString().slice(0, 10)
-    };
-    this.accounts.push(manager);
+    const row = await this.prisma.adminAccount.create({
+      data: { username, displayName: name, passwordHash, role: "admin", status: "active" }
+    });
     return {
       code: 0,
       message: "ok",
       data: {
-        id: manager.id,
-        name: manager.displayName,
-        username: manager.username,
-        status: manager.status,
-        createdAt: manager.createdAt
+        id: row.id,
+        name: row.displayName,
+        username: row.username,
+        status: row.status as "active" | "disabled",
+        createdAt: row.createdAt.toISOString().slice(0, 10)
       }
     };
   }
 
-  updateAdminManager(id: string, body: AdminManagerUpdateRequest): ApiEnvelope<AdminManagerItem> {
+  async updateAdminManager(
+    id: string,
+    body: AdminManagerUpdateRequest
+  ): Promise<ApiEnvelope<AdminManagerItem>> {
     const notConfigured = this.ensureConfigured();
     if (notConfigured) return notConfigured;
-    const manager = this.accounts.find((item) => item.id === id && item.role === "admin");
-    if (!manager) {
+
+    const existing = await this.prisma.adminAccount.findUnique({ where: { id } });
+    if (!existing) {
       return { code: 404, message: "Admin manager not found", data: null };
     }
 
     const nextName = body?.name?.trim();
     const nextPasswordHash = body?.passwordHash?.trim().toLowerCase();
-    if (nextName) {
-      manager.displayName = nextName;
-    }
-    if (nextPasswordHash) {
-      if (!isSha256Hex(nextPasswordHash)) {
-        return { code: 400, message: "Invalid password hash", data: null };
-      }
-      manager.passwordHash = nextPasswordHash;
+    if (nextPasswordHash && !isSha256Hex(nextPasswordHash)) {
+      return { code: 400, message: "Invalid password hash", data: null };
     }
 
+    const row = await this.prisma.adminAccount.update({
+      where: { id },
+      data: {
+        ...(nextName ? { displayName: nextName } : {}),
+        ...(nextPasswordHash ? { passwordHash: nextPasswordHash } : {})
+      }
+    });
     return {
       code: 0,
       message: "ok",
       data: {
-        id: manager.id,
-        name: manager.displayName,
-        username: manager.username,
-        status: manager.status,
-        createdAt: manager.createdAt
+        id: row.id,
+        name: row.displayName,
+        username: row.username,
+        status: row.status as "active" | "disabled",
+        createdAt: row.createdAt.toISOString().slice(0, 10)
       }
     };
   }
 
-  toggleAdminManagerStatus(
+  async toggleAdminManagerStatus(
     id: string,
     status: "active" | "disabled"
-  ): ApiEnvelope<AdminManagerItem> {
+  ): Promise<ApiEnvelope<AdminManagerItem>> {
     const notConfigured = this.ensureConfigured();
     if (notConfigured) return notConfigured;
-    const manager = this.accounts.find((item) => item.id === id && item.role === "admin");
-    if (!manager) {
+
+    const existing = await this.prisma.adminAccount.findUnique({ where: { id } });
+    if (!existing) {
       return { code: 404, message: "Admin manager not found", data: null };
     }
-    manager.status = status;
+
+    const row = await this.prisma.adminAccount.update({
+      where: { id },
+      data: { status }
+    });
     return {
       code: 0,
       message: "ok",
       data: {
-        id: manager.id,
-        name: manager.displayName,
-        username: manager.username,
-        status: manager.status,
-        createdAt: manager.createdAt
+        id: row.id,
+        name: row.displayName,
+        username: row.username,
+        status: row.status as "active" | "disabled",
+        createdAt: row.createdAt.toISOString().slice(0, 10)
       }
     };
   }
