@@ -25,8 +25,9 @@ services:
     env_file:
       - ./services/api/.env
     environment:
+      # 与「真实生产」区分：compose 用于本地/集成联调栈。若需往空库灌演示数据，
+      # 先设 SEED_DEMO=true，再在 api 容器外或一次性任务里执行 `pnpm prisma db seed`（勿在线上生产库执行）。
       NODE_ENV: production
-      SEED_DEMO: "true"
       PORT: "3000"
       DATABASE_URL: postgresql://playmate:playmate@postgres:5432/playmate?schema=public
       REDIS_URL: redis://redis:6379
