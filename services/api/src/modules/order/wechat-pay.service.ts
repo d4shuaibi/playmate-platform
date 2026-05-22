@@ -63,8 +63,21 @@ export class WechatPayService {
   }
 
   private get privateKeyPem(): string {
-    const raw = process.env.WECHAT_PAY_PRIVATE_KEY ?? "";
-    return raw.includes("BEGIN") ? raw.replace(/\\n/g, "\n") : raw;
+    const inline = process.env.WECHAT_PAY_PRIVATE_KEY ?? "";
+    if (inline.includes("BEGIN")) return inline.replace(/\\n/g, "\n");
+
+    const filePath = process.env.WECHAT_PAY_PRIVATE_KEY_PATH ?? "";
+    if (filePath.trim()) {
+      const absolute = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
+      try {
+        return fs.readFileSync(absolute, "utf8").trim();
+      } catch (e) {
+        this.logger.warn(
+          `读取 WECHAT_PAY_PRIVATE_KEY_PATH 失败：${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+    }
+    return "";
   }
 
   /** 商户私钥与证书序列号齐备时可调真实下单 */

@@ -46,6 +46,9 @@ services:
       - api
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/certs:/etc/nginx/certs:ro
 
 volumes:
   playmate_pgdata:
