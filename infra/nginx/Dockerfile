@@ -12,7 +12,7 @@ COPY apps/admin apps/admin
 COPY packages/shared packages/shared
 
 RUN pnpm -C packages/shared build
-RUN pnpm -C apps/admin build
+RUN VITE_API_BASE_URL=/api pnpm -C apps/admin build
 
 FROM nginx:1.27-alpine
 COPY infra/nginx/nginx.conf /etc/nginx/conf.d/default.conf

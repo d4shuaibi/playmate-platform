@@ -152,3 +152,9 @@ pnpm -C services/api gen:jwt-secret:print
 2. 按子项目复制 `.env.example`（如 `apps/admin/.env.example` → `apps/admin/.env.local`）
 3. 执行 `pnpm dev` 启动（或进入子项目单独启动）
 4. 提交前执行 `pnpm check` 确认质量基线通过
+
+## 部署
+
+以后每次部署，SSH 进服务器后运行：
+
+bash /root/deploy.sh
