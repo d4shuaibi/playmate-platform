@@ -60,10 +60,7 @@ export class ProductCategoryService {
       ...(filters.disabled !== undefined ? { disabled: filters.disabled } : {}),
       ...(keywordRaw.length > 0
         ? {
-            OR: [
-              { name: { contains: keywordRaw, mode: "insensitive" } },
-              { id: { contains: keywordRaw, mode: "insensitive" } }
-            ]
+            OR: [{ name: { contains: keywordRaw } }, { id: { contains: keywordRaw } }]
           }
         : {})
     };

@@ -157,10 +157,7 @@ export class ProductService {
       ...(categoryId ? { categoryId } : {}),
       ...(keyword.length > 0
         ? {
-            OR: [
-              { name: { contains: keyword, mode: "insensitive" } },
-              { id: { contains: keyword, mode: "insensitive" } }
-            ]
+            OR: [{ name: { contains: keyword } }, { id: { contains: keyword } }]
           }
         : {})
     };

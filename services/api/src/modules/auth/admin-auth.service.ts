@@ -471,7 +471,7 @@ export class AdminAuthService {
 
     const rows = await this.prisma.adminAccount.findMany({
       where: {
-        ...(filters.name ? { displayName: { contains: filters.name, mode: "insensitive" } } : {}),
+        ...(filters.name ? { displayName: { contains: filters.name } } : {}),
         ...(filters.status ? { status: filters.status } : {})
       },
       orderBy: { createdAt: "asc" }

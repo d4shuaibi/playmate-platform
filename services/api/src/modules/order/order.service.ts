@@ -246,8 +246,8 @@ export class OrderService {
     if (keywordRaw.length > 0) {
       whereParts.push({
         OR: [
-          { orderNo: { contains: keywordRaw, mode: "insensitive" } },
-          { serviceTitle: { contains: keywordRaw, mode: "insensitive" } },
+          { orderNo: { contains: keywordRaw } },
+          { serviceTitle: { contains: keywordRaw } },
           ...(statusesFromChinese.length ? [{ status: { in: statusesFromChinese } }] : [])
         ]
       });
@@ -543,8 +543,8 @@ export class OrderService {
               listWhereBase,
               {
                 OR: [
-                  { orderNo: { contains: keywordRaw, mode: "insensitive" } },
-                  { serviceTitle: { contains: keywordRaw, mode: "insensitive" } },
+                  { orderNo: { contains: keywordRaw } },
+                  { serviceTitle: { contains: keywordRaw } },
                   ...(statusesFromChinese.length ? [{ status: { in: statusesFromChinese } }] : [])
                 ]
               }

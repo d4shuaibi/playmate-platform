@@ -130,10 +130,10 @@ export class WorkerService {
       ...(keyword.length > 0
         ? {
             OR: [
-              { refNo: { contains: keyword, mode: "insensitive" } },
-              { realName: { contains: keyword, mode: "insensitive" } },
-              { phone: { contains: keyword, mode: "insensitive" } },
-              { userId: { contains: keyword, mode: "insensitive" } }
+              { refNo: { contains: keyword } },
+              { realName: { contains: keyword } },
+              { phone: { contains: keyword } },
+              { userId: { contains: keyword } }
             ]
           }
         : {})
@@ -354,9 +354,9 @@ export class WorkerService {
       ...(keyword.length > 0
         ? {
             OR: [
-              { realName: { contains: keyword, mode: "insensitive" } },
-              { phone: { contains: keyword, mode: "insensitive" } },
-              { userId: { contains: keyword, mode: "insensitive" } }
+              { realName: { contains: keyword } },
+              { phone: { contains: keyword } },
+              { userId: { contains: keyword } }
             ]
           }
         : {})

@@ -113,9 +113,9 @@ export class CustomerServiceService {
       ...(keywordRaw.length > 0
         ? {
             OR: [
-              { nickname: { contains: keywordRaw, mode: "insensitive" } },
-              { id: { contains: keywordRaw, mode: "insensitive" } },
-              { wechatId: { contains: keywordRaw, mode: "insensitive" } }
+              { nickname: { contains: keywordRaw } },
+              { id: { contains: keywordRaw } },
+              { wechatId: { contains: keywordRaw } }
             ]
           }
         : {})
