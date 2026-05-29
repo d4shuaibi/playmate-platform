@@ -23,8 +23,12 @@ const config = {
         ? "https://landongdj.cn"
         : process.env.TARO_APP_API_BASE_URL || "http://localhost:3000"
     ),
-    __CLOUD_ENV_ID__: JSON.stringify(process.env.TARO_APP_CLOUD_ENV_ID || ""),
-    __CLOUD_SERVICE_NAME__: JSON.stringify(process.env.TARO_APP_CLOUD_SERVICE_NAME || "api")
+    __CLOUD_ENV_ID__: JSON.stringify(
+      process.env.NODE_ENV === "production"
+        ? "prod-d8gzdqzmobb83f4c9"
+        : process.env.TARO_APP_CLOUD_ENV_ID || ""
+    ),
+    __CLOUD_SERVICE_NAME__: JSON.stringify("api")
   },
   mini: {},
   h5: {}
