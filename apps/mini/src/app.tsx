@@ -8,6 +8,10 @@ const App = ({ children }: PropsWithChildren) => {
     // 每次进入小程序默认回到用户端。
     setRole("user");
 
+    if (__APP_ENV__ === "production" && __CLOUD_ENV_ID__) {
+      Taro.cloud.init({ env: __CLOUD_ENV_ID__ });
+    }
+
     // 保存广告/渠道 clickId 供登录上报
     const query = options.query ?? {};
     const clickId =

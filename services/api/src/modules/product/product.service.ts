@@ -108,15 +108,15 @@ const mapRowToProduct = (row: {
   id: string;
   name: string;
   imageUrl: string;
-  heroImages: string[];
+  heroImages: Prisma.JsonValue;
   titleAccent: string;
   categoryId: string;
   categoryName: string;
   price: unknown;
   originPrice: unknown | null;
   stockText: string;
-  badges: string[];
-  descriptionLines: string[];
+  badges: Prisma.JsonValue;
+  descriptionLines: Prisma.JsonValue;
   notices: Prisma.JsonValue;
   status: CatalogProductStatus;
   createdAt: Date;
@@ -125,15 +125,15 @@ const mapRowToProduct = (row: {
   id: row.id,
   name: row.name,
   imageUrl: row.imageUrl,
-  heroImages: row.heroImages,
+  heroImages: row.heroImages as string[],
   titleAccent: row.titleAccent,
   categoryId: row.categoryId,
   categoryName: row.categoryName,
   price: decimalLikeToNumber(row.price),
   originPrice: row.originPrice === null ? null : decimalLikeToNumber(row.originPrice),
   stockText: row.stockText,
-  badges: row.badges,
-  descriptionLines: row.descriptionLines,
+  badges: row.badges as string[],
+  descriptionLines: row.descriptionLines as string[],
   notices: parseNoticesJson(row.notices),
   status: statusToApi(row.status),
   createdAt: row.createdAt.toISOString().slice(0, 10),

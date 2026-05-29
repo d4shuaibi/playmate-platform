@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -46,7 +46,7 @@ model WorkerProfile {
 
   primaryGame String
   rankText    String
-  specialties String[]
+  specialties Json     @default("[]")
 }
 
 /// 刷新令牌持久化（仅存哈希，不落明文），用于轮换与吊销
@@ -128,7 +128,7 @@ model Product {
 
   name          String
   imageUrl      String
-  heroImages    String[]
+  heroImages    Json               @default("[]")
   titleAccent   String             @default("")
   categoryId    String
   category      ProductCategory    @relation(fields: [categoryId], references: [id], onUpdate: Cascade)
@@ -137,8 +137,8 @@ model Product {
   price         Decimal            @db.Decimal(12, 2)
   originPrice   Decimal?           @db.Decimal(12, 2)
   stockText     String             @default("")
-  badges        String[]
-  descriptionLines String[]
+  badges        Json               @default("[]")
+  descriptionLines Json            @default("[]")
   notices       Json               @default("[]")
 
   status        CatalogProductStatus @default(enabled)

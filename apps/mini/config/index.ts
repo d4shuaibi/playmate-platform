@@ -22,7 +22,9 @@ const config = {
       process.env.NODE_ENV === "production"
         ? "https://landongdj.cn"
         : process.env.TARO_APP_API_BASE_URL || "http://localhost:3000"
-    )
+    ),
+    __CLOUD_ENV_ID__: JSON.stringify(process.env.TARO_APP_CLOUD_ENV_ID || ""),
+    __CLOUD_SERVICE_NAME__: JSON.stringify(process.env.TARO_APP_CLOUD_SERVICE_NAME || "api")
   },
   mini: {},
   h5: {}

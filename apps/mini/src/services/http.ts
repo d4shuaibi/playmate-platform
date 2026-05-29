@@ -20,10 +20,8 @@ type ApiResponse<TData> = {
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH";
   body?: unknown;
-  /** 为 true 时不带 Authorization（用于登录等接口） */
+  /** 为 true 时不带 Authorization */
   skipAuth?: boolean;
-  /** 为 true 时 path 为完整 URL，不拼接 miniEnv.apiBaseUrl */
-  absoluteUrl?: boolean;
 };
 
 type RequestInnerOptions = RequestOptions & {
@@ -38,10 +36,42 @@ type RefreshResponse = {
   role: "user" | "worker";
 };
 
+const useCloud = __APP_ENV__ === "production" && !!__CLOUD_ENV_ID__;
+
+/** 底层发送，生产走 callContainer，开发走 Taro.request */
+const sendRequest = async <TData>(
+  path: string,
+  method: string,
+  header: Record<string, string>,
+  body: unknown
+): Promise<{ statusCode: number; data: TData }> => {
+  if (useCloud) {
+    return Taro.cloud.callContainer<TData>({
+      path,
+      method: method as "GET" | "POST" | "PATCH",
+      header: { ...header, "X-WX-SERVICE": __CLOUD_SERVICE_NAME__ },
+      data: body
+    });
+  }
+
+  const url = `${miniEnv.apiBaseUrl}${path}`;
+  try {
+    return await Taro.request<TData>({
+      url,
+      method: method as "GET" | "POST" | "PATCH",
+      data: body,
+      header
+    });
+  } catch (error: unknown) {
+    const err = error as { errMsg?: string; message?: string };
+    const detail = err.errMsg ?? err.message ?? String(error);
+    throw new Error(`网络请求失败：${detail}。请求地址：${url}`);
+  }
+};
+
 let refreshTask: Promise<boolean> | null = null;
 let lastAuthExpiredNotifyAt = 0;
 
-/** 全局 401 兜底：清会话、回用户首页并提示重新登录（节流避免多次弹 Toast） */
 const handleAuthExpired = async () => {
   clearStoredSession();
   setRole("user");
@@ -79,15 +109,12 @@ const refreshAccessTokenIfNeeded = async (force = false) => {
     }
 
     try {
-      const refreshUrl = `${miniEnv.apiBaseUrl}${apiPaths.miniRefresh}`;
-      const refreshRes = await Taro.request<ApiResponse<RefreshResponse>>({
-        url: refreshUrl,
-        method: "POST",
-        data: { refreshToken },
-        header: {
-          "Content-Type": "application/json"
-        }
-      });
+      const refreshRes = await sendRequest<ApiResponse<RefreshResponse>>(
+        apiPaths.miniRefresh,
+        "POST",
+        { "Content-Type": "application/json" },
+        { refreshToken }
+      );
 
       const payload = refreshRes.data;
       if (!payload || payload.code !== 0 || !payload.data?.accessToken) {
@@ -115,14 +142,13 @@ const refreshAccessTokenIfNeeded = async (force = false) => {
 };
 
 /**
- * 统一 HTTP：业务成功码 code === 0；已登录时携带 `Authorization: Bearer <token>`（与 Nest 后续鉴权扩展对齐）。
+ * 统一 HTTP：业务成功码 code === 0；已登录时携带 Authorization。
+ * 生产环境走微信云托管 callContainer，开发环境走 Taro.request。
  */
 export const request = async <TData>(
   path: string,
   options: RequestInnerOptions = {}
 ): Promise<ApiResponse<TData>> => {
-  const url = options.absoluteUrl === true ? path : `${miniEnv.apiBaseUrl}${path}`;
-
   if (options.skipAuth !== true) {
     await refreshAccessTokenIfNeeded(false);
   }
@@ -136,24 +162,15 @@ export const request = async <TData>(
     header.Authorization = `Bearer ${token}`;
   }
 
-  let response: Taro.request.SuccessCallbackResult<ApiResponse<TData>>;
-  try {
-    response = await Taro.request<ApiResponse<TData>>({
-      url,
-      method: options.method ?? "GET",
-      data: options.body,
-      header
-    });
-  } catch (error: unknown) {
-    const err = error as { errMsg?: string; message?: string };
-    const detail = err.errMsg ?? err.message ?? String(error);
-    throw new Error(
-      `网络请求失败：${detail}。请确认：1) services/api 已启动（如 pnpm dev）；2) 小程序「详情-本地设置」勾选不校验合法域名；3) 真机请用电脑局域网 IP 替代 localhost，且与电脑同网。请求地址：${url}`
-    );
-  }
+  const response = await sendRequest<ApiResponse<TData>>(
+    path,
+    options.method ?? "GET",
+    header,
+    options.body
+  );
 
   if (response.statusCode && response.statusCode >= 400) {
-    throw new Error(`HTTP ${response.statusCode}：${url}`);
+    throw new Error(`HTTP ${response.statusCode}：${path}`);
   }
 
   const payload = response.data;
