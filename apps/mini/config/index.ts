@@ -18,7 +18,11 @@ const config = {
     __APP_ENV__: JSON.stringify(
       process.env.NODE_ENV === "production" ? "production" : "development"
     ),
-    __API_BASE_URL__: JSON.stringify(process.env.TARO_APP_API_BASE_URL || "http://localhost:3000")
+    __API_BASE_URL__: JSON.stringify(
+      process.env.NODE_ENV === "production"
+        ? "https://landongdj.cn"
+        : process.env.TARO_APP_API_BASE_URL || "http://localhost:3000"
+    )
   },
   mini: {},
   h5: {}
