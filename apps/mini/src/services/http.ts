@@ -38,6 +38,16 @@ type RefreshResponse = {
 
 const useCloud = __APP_ENV__ === "production" && !!__CLOUD_ENV_ID__;
 
+// TODO: 诊断用，确认后删除
+console.log(
+  "[http] APP_ENV=",
+  __APP_ENV__,
+  "CLOUD_ENV_ID=",
+  __CLOUD_ENV_ID__,
+  "useCloud=",
+  useCloud
+);
+
 /** 底层发送，生产走 callContainer，开发走 Taro.request */
 const sendRequest = async <TData>(
   path: string,
@@ -46,22 +56,41 @@ const sendRequest = async <TData>(
   body: unknown
 ): Promise<{ statusCode: number; data: TData }> => {
   if (useCloud) {
-    return Taro.cloud.callContainer<TData>({
-      path,
-      method: method as "GET" | "POST" | "PATCH",
-      header: { ...header, "X-WX-SERVICE": __CLOUD_SERVICE_NAME__ },
-      data: body
-    });
+    console.log("[http] callContainer →", method, path, "service=", __CLOUD_SERVICE_NAME__);
+    try {
+      const res = await Taro.cloud.callContainer<TData>({
+        path,
+        method: method as "GET" | "POST" | "PATCH",
+        header: { ...header, "X-WX-SERVICE": __CLOUD_SERVICE_NAME__ },
+        data: body
+      });
+      console.log(
+        "[http] callContainer ←",
+        method,
+        path,
+        "statusCode=",
+        (res as { statusCode?: number }).statusCode,
+        "data=",
+        JSON.stringify(res.data).slice(0, 200)
+      );
+      return res;
+    } catch (err: unknown) {
+      console.error("[http] callContainer ERROR", method, path, JSON.stringify(err));
+      throw err;
+    }
   }
 
   const url = `${miniEnv.apiBaseUrl}${path}`;
+  console.log("[http] Taro.request →", method, url);
   try {
-    return await Taro.request<TData>({
+    const res = await Taro.request<TData>({
       url,
       method: method as "GET" | "POST" | "PATCH",
       data: body,
       header
     });
+    console.log("[http] Taro.request ←", method, url, "statusCode=", res.statusCode);
+    return res;
   } catch (error: unknown) {
     const err = error as { errMsg?: string; message?: string };
     const detail = err.errMsg ?? err.message ?? String(error);

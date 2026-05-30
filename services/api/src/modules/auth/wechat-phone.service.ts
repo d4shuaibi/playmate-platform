@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { WechatAccessTokenService } from "./wechat-access-token.service";
+import { httpsJson } from "../../lib/https-json";
 
 /**
  * 手机号快速验证：用 button getPhoneNumber 回调里的 code 换手机号（与 wx.login 的 code 不同）。
@@ -31,13 +32,7 @@ export class WechatPhoneService {
     const url = new URL("https://api.weixin.qq.com/wxa/business/getuserphonenumber");
     url.searchParams.set("access_token", accessToken);
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: trimmed })
-    });
-
-    const data = (await res.json()) as {
+    const data = await httpsJson<{
       errcode?: number;
       errmsg?: string;
       phone_info?: {
@@ -45,7 +40,11 @@ export class WechatPhoneService {
         purePhoneNumber?: string;
         countryCode?: string;
       };
-    };
+    }>(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: trimmed })
+    });
 
     if (typeof data.errcode === "number" && data.errcode !== 0) {
       this.logger.warn(`getuserphonenumber: ${data.errmsg ?? data.errcode}`);

@@ -75,13 +75,19 @@ const UserHomePage = () => {
 
   useEffect(() => {
     void (async () => {
+      console.log("[home] useEffect: fetching categories...");
       try {
         const categories = await fetchMiniProductCategories();
+        console.log("[home] categories result:", JSON.stringify(categories).slice(0, 200));
         setTabs([
           { key: "all", label: "全部类型" },
           ...categories.map((c) => ({ key: c.id, label: c.name }))
         ]);
       } catch (error) {
+        console.error(
+          "[home] categories error:",
+          error instanceof Error ? error.message : JSON.stringify(error)
+        );
         void Taro.showToast({
           title: error instanceof Error ? error.message : "加载类型失败",
           icon: "none"

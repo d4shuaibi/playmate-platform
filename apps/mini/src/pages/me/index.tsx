@@ -194,16 +194,17 @@ const MePage = () => {
               <View className="mePage__profileMetaRow">
                 <Text className="mePage__profileMeta">{displayId}</Text>
               </View>
-            ) : (
-              <View
-                className="mePage__balanceAction"
-                onClick={() => setLoginOpen(true)}
-                aria-label="登录或注册"
-              >
-                <Text className="mePage__balanceActionText">登录/注册</Text>
-              </View>
-            )}
+            ) : null}
           </View>
+          {!loggedIn ? (
+            <View
+              className="mePage__balanceAction"
+              onClick={() => setLoginOpen(true)}
+              aria-label="登录或注册"
+            >
+              <Text className="mePage__balanceActionText">登录/注册</Text>
+            </View>
+          ) : null}
         </View>
 
         <View className="mePage__switchCard">

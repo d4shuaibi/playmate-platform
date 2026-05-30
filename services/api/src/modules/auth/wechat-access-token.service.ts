@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { httpsJson } from "../../lib/https-json";
 
 /**
  * 缓存 `client_credential` access_token，供 getuserphonenumber 等接口使用。
@@ -24,22 +25,22 @@ export class WechatAccessTokenService {
     }
 
     // 稳定版 token 接口仅支持 POST JSON。
-    const res = await fetch("https://api.weixin.qq.com/cgi-bin/stable_token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        grant_type: "client_credential",
-        appid,
-        secret,
-        force_refresh: false
-      })
+    const body = JSON.stringify({
+      grant_type: "client_credential",
+      appid,
+      secret,
+      force_refresh: false
     });
-    const data = (await res.json()) as {
+    const data = await httpsJson<{
       access_token?: string;
       expires_in?: number;
       errcode?: number;
       errmsg?: string;
-    };
+    }>("https://api.weixin.qq.com/cgi-bin/stable_token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body
+    });
 
     if (typeof data.errcode === "number" && data.errcode !== 0) {
       this.logger.error(`getAccessToken err: ${data.errmsg}`);
