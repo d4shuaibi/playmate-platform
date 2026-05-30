@@ -38,16 +38,6 @@ type RefreshResponse = {
 
 const useCloud = __APP_ENV__ === "production" && !!__CLOUD_ENV_ID__;
 
-// TODO: 诊断用，确认后删除
-console.log(
-  "[http] APP_ENV=",
-  __APP_ENV__,
-  "CLOUD_ENV_ID=",
-  __CLOUD_ENV_ID__,
-  "useCloud=",
-  useCloud
-);
-
 /** 底层发送，生产走 callContainer，开发走 Taro.request */
 const sendRequest = async <TData>(
   path: string,

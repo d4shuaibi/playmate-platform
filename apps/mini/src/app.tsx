@@ -8,11 +8,8 @@ const App = ({ children }: PropsWithChildren) => {
     // 每次进入小程序默认回到用户端。
     setRole("user");
 
-    console.log("[app] useLaunch fired, APP_ENV=", __APP_ENV__, "CLOUD_ENV_ID=", __CLOUD_ENV_ID__);
     if (__APP_ENV__ === "production" && __CLOUD_ENV_ID__) {
-      console.log("[app] calling cloud.init env=", __CLOUD_ENV_ID__);
       Taro.cloud.init({ env: __CLOUD_ENV_ID__ });
-      console.log("[app] cloud.init done");
     }
 
     // 保存广告/渠道 clickId 供登录上报
