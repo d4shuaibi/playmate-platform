@@ -318,7 +318,12 @@ export class AdminAuthService {
   }
 
   private verifyAccessToken(accessToken: string): AdminAccessPayload {
-    const payload = jwt.verify(accessToken, this.tokenSecret) as AdminAccessPayload;
+    let payload: AdminAccessPayload;
+    try {
+      payload = jwt.verify(accessToken, this.tokenSecret) as AdminAccessPayload;
+    } catch {
+      throw new UnauthorizedException("Access token invalid or expired");
+    }
     if (payload.typ !== "admin_access" || typeof payload.sub !== "string") {
       throw new UnauthorizedException("Invalid admin access token");
     }
@@ -326,7 +331,12 @@ export class AdminAuthService {
   }
 
   private verifyRefreshToken(refreshToken: string): AdminRefreshPayload {
-    const payload = jwt.verify(refreshToken, this.tokenSecret) as AdminRefreshPayload;
+    let payload: AdminRefreshPayload;
+    try {
+      payload = jwt.verify(refreshToken, this.tokenSecret) as AdminRefreshPayload;
+    } catch {
+      throw new UnauthorizedException("Refresh token invalid or expired");
+    }
     if (payload.typ !== "admin_refresh" || typeof payload.sub !== "string") {
       throw new UnauthorizedException("Invalid admin refresh token");
     }

@@ -4,6 +4,7 @@ import type { UploadFile } from "antd/es/upload/interface";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAdminAuthSession } from "../../services/auth/session";
+import { getValidAdminAccessToken } from "../../services/auth/token";
 import { requestProductCategories } from "../../services/product-category/api";
 import { type ProductCategory } from "../../services/product-category/types";
 import { requestCreateProduct } from "../../services/product/api";
@@ -63,16 +64,18 @@ export const CreateProductPage = () => {
   };
 
   const handleSubmit = () => {
-    if (!accessToken) {
-      message.error("登录已失效，请重新登录");
-      void navigate("/login");
-      return;
-    }
-
     void (async () => {
       try {
         const values = await form.validateFields();
         setSubmitLoading(true);
+        let accessToken: string;
+        try {
+          accessToken = await getValidAdminAccessToken();
+        } catch {
+          message.error("登录已失效，请重新登录");
+          void navigate("/login");
+          return;
+        }
 
         const category = categories.find((item) => item.id === values.categoryId);
         if (!category) {
