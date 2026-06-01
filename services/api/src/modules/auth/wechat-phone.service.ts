@@ -50,6 +50,9 @@ export class WechatPhoneService {
       body: JSON.stringify({ code: trimmed })
     });
 
+    // 记录完整响应以便调试
+    this.logger.debug(`getuserphonenumber response: ${JSON.stringify(data)}`);
+
     if (typeof data.errcode === "number" && data.errcode !== 0) {
       this.logger.warn(`getuserphonenumber: ${data.errmsg ?? data.errcode}`);
       throw new Error(data.errmsg ?? `WeChat phone errcode ${data.errcode}`);
@@ -57,6 +60,9 @@ export class WechatPhoneService {
 
     const info = data.phone_info;
     if (!info?.phoneNumber || !info.purePhoneNumber) {
+      this.logger.warn(
+        `getuserphonenumber: phone_info missing or incomplete. Full response: ${JSON.stringify(data)}`
+      );
       throw new Error("Invalid phone_info in WeChat response");
     }
 
