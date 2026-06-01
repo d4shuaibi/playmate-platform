@@ -28,7 +28,11 @@ const config = {
         ? "prod-d8gzdqzmobb83f4c9"
         : process.env.TARO_APP_CLOUD_ENV_ID || ""
     ),
-    __CLOUD_SERVICE_NAME__: JSON.stringify("api")
+    __CLOUD_SERVICE_NAME__: JSON.stringify(
+      process.env.NODE_ENV === "production"
+        ? "api"
+        : process.env.TARO_APP_CLOUD_SERVICE_NAME || "api"
+    )
   },
   mini: {},
   h5: {}

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
+import { httpsJson } from "../../lib/https-json";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthTokenService, type IssuedTokenBundle } from "./auth-token.service";
 import { WechatPhoneService } from "./wechat-phone.service";
@@ -210,13 +211,12 @@ export class AuthService {
         url.searchParams.set("secret", secret);
         url.searchParams.set("js_code", wxLoginCode);
         url.searchParams.set("grant_type", "authorization_code");
-        const res = await fetch(url);
-        const data = (await res.json()) as {
+        const data = await httpsJson<{
           openid?: string;
           unionid?: string;
           errcode?: number;
           errmsg?: string;
-        };
+        }>(url);
         if (typeof data.errcode === "number" && data.errcode !== 0) {
           this.logger.warn(`code2session err: ${data.errmsg ?? data.errcode}`);
           return;

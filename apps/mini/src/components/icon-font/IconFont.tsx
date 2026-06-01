@@ -10,5 +10,14 @@ type AppIconFontProps = {
 };
 
 export const AppIconFont = ({ name, className, size, color, style }: AppIconFontProps) => {
-  return <IconFont name={name} className={className} size={size} color={color} style={style} />;
+  return (
+    <IconFont
+      name={name}
+      className={className}
+      size={size}
+      color={color}
+      style={style}
+      tag={"view" as unknown as string}
+    />
+  );
 };

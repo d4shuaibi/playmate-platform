@@ -1,4 +1,5 @@
 export default defineAppConfig({
+  cloud: true,
   lazyCodeLoading: "requiredComponents",
   pages: [
     "pages/home-user/index",
