@@ -127,7 +127,7 @@ model Product {
   updatedAt DateTime             @updatedAt
 
   name          String
-  imageUrl      String
+  imageUrl      String             @db.Text
   heroImages    Json               @default("[]")
   titleAccent   String             @default("")
   categoryId    String

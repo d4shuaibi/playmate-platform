@@ -105,9 +105,41 @@ const MePage = () => {
       setLoginOpen(true);
       return;
     }
-    setRole("worker");
-    setCurrentRole("worker");
-    void Taro.redirectTo({ url: "/pages/home-worker/index" });
+    void (async () => {
+      try {
+        const progress = await fetchWorkerJoinProgress();
+        if (progress?.status === "approved") {
+          setRole("worker");
+          setCurrentRole("worker");
+          void Taro.redirectTo({ url: "/pages/home-worker/index" });
+          return;
+        }
+        if (!progress || progress.status === "rejected") {
+          const res = await Taro.showModal({
+            title: "尚未获得打手权限",
+            content:
+              progress?.status === "rejected"
+                ? "入驻申请已被拒绝，可重新提交申请。"
+                : "您还不是打手，请先完成入驻申请。",
+            confirmText: "去申请",
+            cancelText: "取消"
+          });
+          if (res.confirm) {
+            void Taro.navigateTo({ url: "/pages/worker-join/index" });
+          }
+          return;
+        }
+        void Taro.showToast({
+          title: "入驻申请审核中，请耐心等待",
+          icon: "none"
+        });
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "检查权限失败",
+          icon: "none"
+        });
+      }
+    })();
   };
 
   const handleFeatureClick = (label: string) => {
