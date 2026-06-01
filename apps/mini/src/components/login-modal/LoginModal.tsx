@@ -1,4 +1,4 @@
-import { View, Text, Button } from "@tarojs/components";
+import { View, Text, Button, Checkbox } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import { useEffect, useState } from "react";
 import { loginWithPhoneCode } from "../../services/auth";
@@ -90,11 +90,16 @@ export const LoginModal = (props: LoginModalProps) => {
             登录仅支持手机号验证：勾选协议后点击下方按钮授权，新用户将自动注册。
           </Text>
 
-          <View className="loginModal__checkRow" onClick={handleToggleAgreement}>
-            <View
-              className={`loginModal__checkbox ${isAgreementChecked ? "loginModal__checkbox--on" : ""}`}
+          <View className="loginModal__checkRow">
+            <Checkbox
+              checked={isAgreementChecked}
+              onChange={handleToggleAgreement}
+              className="loginModal__checkbox"
+              color="#a78bfa"
             />
-            <Text className="loginModal__checkLabel">我已阅读并同意上述协议</Text>
+            <Text className="loginModal__checkLabel" onClick={handleToggleAgreement}>
+              我已阅读并同意上述协议
+            </Text>
           </View>
         </View>
 

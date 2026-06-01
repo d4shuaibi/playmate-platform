@@ -17,6 +17,7 @@ RUN pnpm --filter @playmate/api deploy --prod --legacy /out
 RUN mkdir -p /out/node_modules && cp -R /repo/node_modules/.pnpm/@prisma+client@*/node_modules/.prisma /out/node_modules/.prisma
 
 FROM node:20-alpine
+RUN apk add --no-cache ca-certificates && update-ca-certificates
 WORKDIR /app
 ENV NODE_ENV=production
 

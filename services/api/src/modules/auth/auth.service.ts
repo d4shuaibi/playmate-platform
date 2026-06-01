@@ -255,7 +255,10 @@ export class AuthService {
       this.logger.warn(`phone code exchange failed: ${msg}`);
       return {
         code: 401,
-        message: "Invalid or expired phone code",
+        message:
+          process.env.NODE_ENV !== "production"
+            ? `Invalid or expired phone code: ${msg}`
+            : "Invalid or expired phone code",
         data: null
       };
     }
