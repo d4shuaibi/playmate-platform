@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { WechatAccessTokenService } from "./wechat-access-token.service";
 import { httpsJson } from "../../lib/https-json";
+import { useWechatOpenApiProxy, wechatOpenApiUrl } from "../../lib/wechat-openapi";
 
 /**
  * 手机号快速验证：用 button getPhoneNumber 回调里的 code 换手机号（与 wx.login 的 code 不同）。
@@ -28,9 +29,12 @@ export class WechatPhoneService {
       throw new Error("Missing phone code");
     }
 
-    const accessToken = await this.accessToken.getAccessToken();
-    const url = new URL("https://api.weixin.qq.com/wxa/business/getuserphonenumber");
-    url.searchParams.set("access_token", accessToken);
+    const url = wechatOpenApiUrl("/wxa/business/getuserphonenumber");
+    if (!useWechatOpenApiProxy()) {
+      // 非云托管（本地）：自管 access_token 走 https；代理模式由平台自动注入。
+      const accessToken = await this.accessToken.getAccessToken();
+      url.searchParams.set("access_token", accessToken);
+    }
 
     const data = await httpsJson<{
       errcode?: number;

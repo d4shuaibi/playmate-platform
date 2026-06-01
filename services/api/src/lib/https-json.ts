@@ -8,8 +8,9 @@ type JsonRequestOptions = {
 };
 
 /**
- * Node.js 内置 https.request 封装，返回解析后的 JSON。
+ * Node.js 内置 http(s).request 封装，返回解析后的 JSON。
  * 替代 native fetch（undici）——在微信云托管 VPC 环境里 undici 出网有兼容性问题。
+ * 微信 OpenAPI 的 http/https 地址选择见 lib/wechat-openapi.ts。
  */
 export const httpsJson = <T = unknown>(
   url: string | URL,

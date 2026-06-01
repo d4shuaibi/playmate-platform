@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { createHash } from "crypto";
 import { httpsJson } from "../../lib/https-json";
+import { wechatOpenApiUrl } from "../../lib/wechat-openapi";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthTokenService, type IssuedTokenBundle } from "./auth-token.service";
 import { WechatPhoneService } from "./wechat-phone.service";
@@ -206,7 +207,7 @@ export class AuthService {
     const resolveWechatSessionIfNeeded = async () => {
       if (!wxLoginCode) return;
       if (appid && secret) {
-        const url = new URL("https://api.weixin.qq.com/sns/jscode2session");
+        const url = wechatOpenApiUrl("/sns/jscode2session");
         url.searchParams.set("appid", appid);
         url.searchParams.set("secret", secret);
         url.searchParams.set("js_code", wxLoginCode);

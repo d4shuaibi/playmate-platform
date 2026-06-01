@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { httpsJson } from "../../lib/https-json";
+import { wechatOpenApiUrl } from "../../lib/wechat-openapi";
 
 /**
  * 缓存 `client_credential` access_token，供 getuserphonenumber 等接口使用。
@@ -36,7 +37,7 @@ export class WechatAccessTokenService {
       expires_in?: number;
       errcode?: number;
       errmsg?: string;
-    }>("https://api.weixin.qq.com/cgi-bin/stable_token", {
+    }>(wechatOpenApiUrl("/cgi-bin/stable_token"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body
