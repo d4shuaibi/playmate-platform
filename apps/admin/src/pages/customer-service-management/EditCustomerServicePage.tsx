@@ -4,6 +4,7 @@ import type { UploadFile } from "antd/es/upload/interface";
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getAdminAuthSession } from "../../services/auth/session";
+import { getValidAdminAccessToken } from "../../services/auth/token";
 import {
   requestCustomerServiceAgent,
   requestUpdateCustomerServiceAgent,
@@ -90,13 +91,15 @@ export const EditCustomerServicePage = () => {
     if (!id?.trim()) return;
     void (async () => {
       try {
-        if (!accessToken) {
+        const values = await form.validateFields();
+        let accessToken: string;
+        try {
+          accessToken = await getValidAdminAccessToken();
+        } catch {
           message.error("登录已失效，请重新登录");
           void navigate("/login");
           return;
         }
-
-        const values = await form.validateFields();
 
         let avatarUrl = resolveUploadUrlFromFileList(values.avatarFiles);
         const avatarNewFile = getOriginFileFromList(values.avatarFiles);

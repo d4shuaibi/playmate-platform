@@ -2,7 +2,7 @@ import { ArrowLeftOutlined, CameraOutlined, QrcodeOutlined } from "@ant-design/i
 import { Button, Card, Form, Input, Typography, Upload, message } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import { useNavigate } from "react-router-dom";
-import { getAdminAuthSession } from "../../services/auth/session";
+import { getValidAdminAccessToken } from "../../services/auth/token";
 import {
   requestCreateCustomerServiceAgent,
   requestUploadFile
@@ -18,8 +18,6 @@ type CreateServiceFormValues = {
 export const CreateCustomerServicePage = () => {
   const [form] = Form.useForm<CreateServiceFormValues>();
   const navigate = useNavigate();
-  const session = getAdminAuthSession();
-  const accessToken = session?.accessToken ?? "";
 
   const normalizeUploadFiles = (event: { fileList: UploadFile[] } | UploadFile[]) => {
     if (Array.isArray(event)) {
@@ -36,13 +34,15 @@ export const CreateCustomerServicePage = () => {
   const handleSubmit = () => {
     void (async () => {
       try {
-        if (!accessToken) {
+        const values = await form.validateFields();
+        let accessToken: string;
+        try {
+          accessToken = await getValidAdminAccessToken();
+        } catch {
           message.error("登录已失效，请重新登录");
           void navigate("/login");
           return;
         }
-
-        const values = await form.validateFields();
 
         const avatarFile = values.avatarFiles?.[0]?.originFileObj;
         const qrFile = values.wechatQrFiles?.[0]?.originFileObj;
