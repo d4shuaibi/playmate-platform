@@ -9,8 +9,11 @@ export const normalizeUploadFiles = (event: { fileList: UploadFile[] } | UploadF
 export const resolveUploadUrlFromFileList = (fileList?: UploadFile[]) => {
   const file = fileList?.[0];
   if (!file || file.status === "error") return undefined;
-  if (typeof file.url === "string" && file.url.length > 0) return file.url;
-  if (typeof file.thumbUrl === "string" && file.thumbUrl.length > 0) return file.thumbUrl;
+  // 仅认已上传的远端地址；thumbUrl 是 antd 生成的 base64 本地预览，
+  // 当成 url 会把整张图内联进请求体撑爆 1MB 网关限制，必须走 COS 直传。
+  if (typeof file.url === "string" && file.url.length > 0 && !file.url.startsWith("data:")) {
+    return file.url;
+  }
   return undefined;
 };
 
