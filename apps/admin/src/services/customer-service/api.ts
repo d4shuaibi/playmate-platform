@@ -60,11 +60,57 @@ export const requestCustomerServiceAgents = async (
   return unwrapEnvelope<{ items: CustomerServiceAgent[]; total: number }>(response);
 };
 
-export const requestUploadFile = async (accessToken: string, file: File) => {
+type UploadResult = { id: string; url: string; originalName: string; mimeType: string };
+
+type UploadUrlData =
+  | { mode: "direct" }
+  | {
+      mode: "cos";
+      uploadUrl: string;
+      formFields: Record<string, string>;
+      fileId: string;
+      accessUrl: string;
+    };
+
+/**
+ * 上传文件。优先走云托管对象存储直传（绕开服务网关 1MB 请求体限制）：
+ * 先向后端换取直传凭证，再把文件直接 POST 到对象存储；后端不可用对象存储时
+ * 自动回退到 /files/upload 内存直传（本地联调）。
+ */
+export const requestUploadFile = async (accessToken: string, file: File): Promise<UploadResult> => {
   const token = ensureAccessToken(accessToken);
+
+  const metaResponse = await fetch(buildUrl("/files/upload-url"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildAuthHeader(token)
+    },
+    body: JSON.stringify({ filename: file.name })
+  });
+  const meta = await unwrapEnvelope<UploadUrlData>(metaResponse);
+
+  if (meta.mode === "cos") {
+    const cosForm = new FormData();
+    Object.entries(meta.formFields).forEach(([key, value]) => cosForm.append(key, value));
+    // file 字段必须最后追加（COS 要求 file 在表单字段之后）。
+    cosForm.append("file", file);
+
+    const cosResponse = await fetch(meta.uploadUrl, { method: "POST", body: cosForm });
+    if (!cosResponse.ok) {
+      throw new Error(`上传到对象存储失败：${cosResponse.status}`);
+    }
+    return {
+      id: meta.fileId,
+      url: meta.accessUrl,
+      originalName: file.name,
+      mimeType: file.type
+    };
+  }
+
+  // 本地回退：直接 multipart 上传到后端内存存储。
   const formData = new FormData();
   formData.append("file", file);
-
   const response = await fetch(buildUrl("/files/upload"), {
     method: "POST",
     headers: {
@@ -72,10 +118,7 @@ export const requestUploadFile = async (accessToken: string, file: File) => {
     },
     body: formData
   });
-
-  return unwrapEnvelope<{ id: string; url: string; originalName: string; mimeType: string }>(
-    response
-  );
+  return unwrapEnvelope<UploadResult>(response);
 };
 
 export const requestCreateCustomerServiceAgent = async (

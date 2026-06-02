@@ -15,3 +15,6 @@ export const useWechatOpenApiProxy = (): boolean => process.env.WECHAT_OPENAPI_P
 /** 按当前环境拼接微信 OpenAPI 地址：代理模式用 http，否则用 https。 */
 export const wechatOpenApiUrl = (path: string): URL =>
   new URL(`${useWechatOpenApiProxy() ? "http" : "https"}://${WECHAT_API_HOST}${path}`);
+
+/** 微信云托管对象存储所需的环境 ID（如 prod-xxxx），未配置时返回空串。 */
+export const wechatCloudEnvId = (): string => process.env.WECHAT_CLOUD_ENV_ID?.trim() ?? "";
