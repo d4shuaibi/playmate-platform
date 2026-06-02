@@ -96,6 +96,8 @@ export const requestUploadFile = async (accessToken: string, file: File): Promis
     // file 字段必须最后追加（COS 要求 file 在表单字段之后）。
     cosForm.append("file", file);
 
+    // 直传到云托管对象存储。需在「云开发/云托管控制台 → 存储 → 存储配置 → 安全域名」
+    // 把 admin 的来源 origin 加入白名单，否则浏览器会因缺少跨域响应头而报 CORS 错误。
     const cosResponse = await fetch(meta.uploadUrl, { method: "POST", body: cosForm });
     if (!cosResponse.ok) {
       throw new Error(`上传到对象存储失败：${cosResponse.status}`);
