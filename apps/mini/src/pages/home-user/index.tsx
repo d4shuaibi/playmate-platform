@@ -1,4 +1,4 @@
-import { View, Text, Swiper, SwiperItem, ScrollView, Input } from "@tarojs/components";
+import { View, Text, Swiper, SwiperItem, ScrollView, Input, Image } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import { Notice, Search, Star, HeartFill } from "@nutui/icons-react-taro";
 import React, { useEffect, useMemo, useState } from "react";
@@ -9,16 +9,14 @@ import { LoginModal } from "../../components/login-modal/LoginModal";
 import { getRole } from "../../utils/role";
 import { getToken } from "../../utils/session";
 import { fetchMiniProductCategories, fetchMiniProducts } from "../../services/products";
+import {
+  fetchMiniBanners,
+  fetchMiniNotices,
+  MiniBanner,
+  MiniNotice
+} from "../../services/home-content";
 
 type ServiceTab = { key: string; label: string };
-
-type BannerItem = {
-  tag: string;
-  title: string;
-  subtitle: string;
-  rightTitle: string;
-  rightSubTitle: string;
-};
 
 type ServiceItem = {
   id: string;
@@ -30,37 +28,8 @@ type ServiceItem = {
   coverClassName: string;
   chip: string;
   chipClassName: string;
+  imageUrl: string;
 };
-
-const BANNERS: BannerItem[] = [
-  {
-    tag: "限时优惠",
-    title: "夏季赛",
-    subtitle: "冠军冲刺代练",
-    rightTitle: "GAMING",
-    rightSubTitle: "SAFE WORK"
-  },
-  {
-    tag: "新客福利",
-    title: "首单特惠",
-    subtitle: "资深大神 8 折起",
-    rightTitle: "PRO TEAM",
-    rightSubTitle: "FAST MATCH"
-  },
-  {
-    tag: "今晚爆单",
-    title: "高分冲榜",
-    subtitle: "稳定不掉星",
-    rightTitle: "NIGHT RUN",
-    rightSubTitle: "RANK UP"
-  }
-];
-
-const NOTICE_LIST: string[] = [
-  "系统通知：周末大促已开启，部分服务立减 20%",
-  "平台公告：新入驻大神已上线，可优先下单",
-  "温馨提醒：下单前请确认服务时段和需求"
-];
 
 const DEFAULT_TABS: ServiceTab[] = [{ key: "all", label: "全部类型" }];
 
@@ -72,13 +41,13 @@ const UserHomePage = () => {
   const [loginOpen, setLoginOpen] = useState(false);
   /** 搜索框草稿，确认后跳转分类页并带上 keyword / categoryId */
   const [searchDraft, setSearchDraft] = useState("");
+  const [banners, setBanners] = useState<MiniBanner[]>([]);
+  const [notices, setNotices] = useState<MiniNotice[]>([]);
 
   useEffect(() => {
     void (async () => {
-      console.log("[home] useEffect: fetching categories...");
       try {
         const categories = await fetchMiniProductCategories();
-        console.log("[home] categories result:", JSON.stringify(categories).slice(0, 200));
         setTabs([
           { key: "all", label: "全部类型" },
           ...categories.map((c) => ({ key: c.id, label: c.name }))
@@ -99,6 +68,24 @@ const UserHomePage = () => {
   useEffect(() => {
     void (async () => {
       try {
+        const [bannersData, noticesData] = await Promise.all([
+          fetchMiniBanners(),
+          fetchMiniNotices()
+        ]);
+        setBanners(bannersData);
+        setNotices(noticesData);
+      } catch (error) {
+        console.error(
+          "[home] home content error:",
+          error instanceof Error ? error.message : JSON.stringify(error)
+        );
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      try {
         const items = await fetchMiniProducts({
           categoryId: activeTypeKey === "all" ? undefined : activeTypeKey
         });
@@ -112,6 +99,7 @@ const UserHomePage = () => {
                   : index % 4 === 2
                     ? "userHome__serviceCover--c"
                     : "userHome__serviceCover--d";
+            const resolvedImageUrl = item.heroImages?.[0] ?? item.imageUrl ?? "";
             return {
               id: item.id,
               categoryKey: item.categoryId,
@@ -121,7 +109,8 @@ const UserHomePage = () => {
               price: `¥${item.price.toFixed(2)}`,
               coverClassName,
               chip: item.categoryName,
-              chipClassName: "userHome__coverChip--brand"
+              chipClassName: "userHome__coverChip--brand",
+              imageUrl: resolvedImageUrl
             };
           })
         );
@@ -226,17 +215,19 @@ const UserHomePage = () => {
             indicatorColor="rgba(255,255,255,0.30)"
             indicatorActiveColor="#a78bfa"
           >
-            {BANNERS.map((banner) => (
-              <SwiperItem key={banner.title}>
+            {banners.map((banner) => (
+              <SwiperItem key={banner.id}>
                 <View className="userHome__banner">
+                  {banner.imageUrl ? (
+                    <Image
+                      className="userHome__bannerImage"
+                      src={banner.imageUrl}
+                      mode="aspectFill"
+                    />
+                  ) : null}
                   <View className="userHome__bannerOverlay">
-                    <Text className="userHome__bannerTag">{banner.tag}</Text>
                     <Text className="userHome__bannerTitle">{banner.title}</Text>
                     <Text className="userHome__bannerSubTitle">{banner.subtitle}</Text>
-                  </View>
-                  <View className="userHome__bannerRight">
-                    <Text className="userHome__bannerRightTitle">{banner.rightTitle}</Text>
-                    <Text className="userHome__bannerRightSub">{banner.rightSubTitle}</Text>
                   </View>
                 </View>
               </SwiperItem>
@@ -253,10 +244,10 @@ const UserHomePage = () => {
               interval={3000}
               duration={450}
             >
-              {NOTICE_LIST.map((message) => (
-                <SwiperItem key={message}>
+              {notices.map((notice) => (
+                <SwiperItem key={notice.id}>
                   <View className="userHome__noticeItem">
-                    <Text className="userHome__noticeText">{message}</Text>
+                    <Text className="userHome__noticeText">{notice.content}</Text>
                   </View>
                 </SwiperItem>
               ))}
@@ -323,6 +314,13 @@ const UserHomePage = () => {
               aria-label={`选择${service.categoryName}服务`}
             >
               <View className={`userHome__serviceCover ${service.coverClassName}`}>
+                {service.imageUrl ? (
+                  <Image
+                    className="userHome__serviceImage"
+                    src={service.imageUrl}
+                    mode="aspectFill"
+                  />
+                ) : null}
                 <Text className={`userHome__coverChip ${service.chipClassName}`}>
                   {service.chip}
                 </Text>

@@ -10,6 +10,7 @@ import { ProductModule } from "../product/product.module";
 import { MiniCatalogModule } from "../mini-catalog/mini-catalog.module";
 import { OrderModule } from "../order/order.module";
 import { WorkerModule } from "../worker/worker.module";
+import { HomeContentModule } from "../home-content/home-content.module";
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { WorkerModule } from "../worker/worker.module";
     MiniCatalogModule,
     OrderModule,
     WorkerModule,
+    HomeContentModule,
     HealthModule
   ],
   providers: [PrismaService],

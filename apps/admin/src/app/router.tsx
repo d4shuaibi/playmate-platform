@@ -15,6 +15,12 @@ import { EditProductPage } from "../pages/product-management/EditProductPage";
 import { OrderManagementPage } from "../pages/order-management/OrderManagementPage";
 import { OrderDetailPage } from "../pages/order-management/OrderDetailPage";
 import { WorkerManagementPage } from "../pages/worker-management/WorkerManagementPage";
+import { BannerManagementPage } from "../pages/banner-management/BannerManagementPage";
+import { CreateBannerPage } from "../pages/banner-management/CreateBannerPage";
+import { EditBannerPage } from "../pages/banner-management/EditBannerPage";
+import { NoticeManagementPage } from "../pages/notice-management/NoticeManagementPage";
+import { CreateNoticePage } from "../pages/notice-management/CreateNoticePage";
+import { EditNoticePage } from "../pages/notice-management/EditNoticePage";
 import { getAdminAuthSession, getAdminDefaultPath } from "../services/auth/session";
 
 const NavigateToDefaultPage = () => {
@@ -124,6 +130,54 @@ export const AppRouter = () => {
             element={
               <RequireAdminPermission permission="worker.read">
                 <WorkerManagementPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/banner-management"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <BannerManagementPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/banner-management/create"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <CreateBannerPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/banner-management/edit/:id"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <EditBannerPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/notice-management"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <NoticeManagementPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/notice-management/create"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <CreateNoticePage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/notice-management/edit/:id"
+            element={
+              <RequireAdminPermission permission="product.write">
+                <EditNoticePage />
               </RequireAdminPermission>
             }
           />

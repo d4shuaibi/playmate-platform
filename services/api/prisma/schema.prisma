@@ -266,3 +266,34 @@ model BizOrder {
   @@index([createdAt])
   @@map("biz_orders")
 }
+
+/// 首页轮播图
+model HomeBanner {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  title      String
+  subtitle   String
+  imageUrl   String   @db.Text
+  linkUrl    String?  @db.Text
+  sortOrder  Int      @default(0)
+  enabled    Boolean  @default(true)
+  createdBy  String
+
+  @@index([enabled, sortOrder])
+}
+
+/// 首页滚动通知
+model HomeNotice {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  content    String
+  sortOrder  Int      @default(0)
+  enabled    Boolean  @default(true)
+  createdBy  String
+
+  @@index([enabled, sortOrder])
+}

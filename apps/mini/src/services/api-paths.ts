@@ -16,6 +16,11 @@ export const apiPaths = {
   /** GET 小程序商品列表（仅上架） */
   miniProducts: "/api/mini/products",
 
+  /** GET 小程序首页轮播图（已启用） */
+  miniBanners: "/api/mini/banners",
+  /** GET 小程序首页滚动通知（已启用） */
+  miniNotices: "/api/mini/notices",
+
   /** GET 当前用户打手入驻进度（需要登录） */
   miniWorkerJoinProgress: "/api/mini/worker-join/progress",
   /** POST 提交打手入驻申请（需要登录） */

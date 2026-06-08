@@ -13,6 +13,7 @@
     "gen:jwt-secret": "node scripts/gen-jwt-secret.cjs",
     "gen:jwt-secret:print": "node scripts/gen-jwt-secret-print.cjs",
     "prisma:generate": "prisma generate",
+    "//prisma:migrate": "已废弃：当前部署用 Dockerfile 内的 prisma db push 同步 schema，不走迁移文件；migrations/ 为早期 PostgreSQL 遗留，请勿对 MySQL 使用此脚本",
     "prisma:migrate": "prisma migrate deploy",
     "lint": "eslint . --ext ts --max-warnings 0",
     "type-check": "tsc --noEmit",

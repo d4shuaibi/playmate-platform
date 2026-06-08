@@ -112,6 +112,16 @@
   display: flex;
   justify-content: space-between;
   padding: 16px;
+  position: relative;
+}
+
+.userHome__bannerImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
 
 .userHome__noticeBar {
@@ -152,6 +162,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
+  z-index: 1;
 }
 
 .userHome__bannerTag {
@@ -339,6 +351,16 @@
   background: rgba(255, 255, 255, 0.04);
   overflow: hidden;
   position: relative;
+}
+
+.userHome__serviceImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
 }
 
 .userHome__serviceCover--a {

@@ -5,7 +5,9 @@ import {
   SafetyCertificateOutlined,
   ShoppingCartOutlined,
   TeamOutlined,
-  UserSwitchOutlined
+  UserSwitchOutlined,
+  PictureOutlined,
+  SoundOutlined
 } from "@ant-design/icons";
 import { type ReactNode } from "react";
 import { Badge, Button, Input, Tag, Typography } from "antd";
@@ -73,6 +75,20 @@ export const AppLayout = () => {
       icon: <UserSwitchOutlined />,
       path: "/customer-service-management",
       permission: "customer_service.write"
+    },
+    {
+      key: "bannerManagement",
+      label: "轮播图管理",
+      icon: <PictureOutlined />,
+      path: "/banner-management",
+      permission: "product.write"
+    },
+    {
+      key: "noticeManagement",
+      label: "通知管理",
+      icon: <SoundOutlined />,
+      path: "/notice-management",
+      permission: "product.write"
     }
   ];
 
@@ -114,7 +130,7 @@ export const AppLayout = () => {
             return (
               <NavLink
                 key={item.key}
-                to={item.path}
+                to={item.path ?? "#"}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-l font-medium transition-all ${
                   isActive
                     ? "bg-white text-blue-600 shadow-sm"
