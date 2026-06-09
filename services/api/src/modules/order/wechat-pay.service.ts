@@ -230,6 +230,43 @@ export class WechatPayService {
   }
 
   /**
+   * 按商户订单号查单（商户 API v3）。用于支付成功后主动同步状态，兜底异步通知延迟/丢失。
+   * GET /v3/pay/transactions/out-trade-no/{out_trade_no}?mchid=xxx
+   */
+  async queryOrderByOutTradeNo(
+    outTradeNo: string
+  ): Promise<{ tradeState: string; transactionId: string }> {
+    if (!this.isLiveConfigured()) {
+      throw new Error("微信支付商户参数未配置完整（WECHAT_PAY_*）");
+    }
+
+    const urlPath = `/v3/pay/transactions/out-trade-no/${encodeURIComponent(outTradeNo)}?mchid=${encodeURIComponent(this.mchId)}`;
+    const host = "https://api.mch.weixin.qq.com";
+    const authorization = this.buildAuthorizationHeader("GET", urlPath, "");
+
+    const res = await fetch(`${host}${urlPath}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: authorization,
+        "User-Agent": "PlaymatePlatform/1.0"
+      }
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      this.logger.warn(`Wechat query HTTP ${res.status}: ${text}`);
+      throw new Error(`微信查单失败（HTTP ${res.status}）`);
+    }
+
+    const parsed = JSON.parse(text) as { trade_state?: string; transaction_id?: string };
+    return {
+      tradeState: parsed.trade_state ?? "",
+      transactionId: parsed.transaction_id ?? ""
+    };
+  }
+
+  /**
    * 生成小程序调起支付参数（RSA 签名 paySign）。
    */
   buildMiniProgramPaymentParams(prepayId: string): MiniProgramPaymentParams {

@@ -68,6 +68,16 @@ export class MiniOrderController {
   }
 
   /**
+   * POST /api/mini/orders/:id/sync-pay-state  支付成功后主动查单同步状态（兜底异步通知）
+   */
+  @Post(":id/sync-pay-state")
+  async syncPayState(@Req() req: RequestWithMini, @Param("id") orderId: string) {
+    const userId = req.miniAuth?.sub;
+    if (!userId) throw new UnauthorizedException();
+    return this.orderService.syncMiniOrderPayState(userId, orderId);
+  }
+
+  /**
    * GET /api/mini/orders/:id
    */
   @Get(":id")

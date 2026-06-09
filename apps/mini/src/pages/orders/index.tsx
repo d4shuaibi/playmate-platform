@@ -3,7 +3,9 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import { LoginModal } from "../../components/login-modal/LoginModal";
 import { getRole } from "../../utils/role";
+import { getToken } from "../../utils/session";
 import {
   fetchMiniOrders,
   type MiniOrder,
@@ -126,11 +128,17 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState<MiniOrder[]>([]);
   const [counts, setCounts] = useState<MiniOrderTabCounts>(EMPTY_COUNTS);
   const [loading, setLoading] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const skipDidShowOnceRef = useRef(true);
 
   const cards = useMemo(() => orders.map(mapOrderToCard), [orders]);
 
   const loadOrders = useCallback(async () => {
+    // 未登录时不调订单接口，直接拉起登录
+    if (!getToken()) {
+      setLoginOpen(true);
+      return;
+    }
     try {
       setLoading(true);
       const statusFilter = activeTab === "all" ? undefined : activeTab;
@@ -291,6 +299,15 @@ const OrdersPage = () => {
       </ScrollView>
 
       <BottomBar role={role} activeKey="orders" />
+
+      <LoginModal
+        visible={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        onLoginSuccess={() => {
+          setLoginOpen(false);
+          void loadOrders();
+        }}
+      />
     </View>
   );
 };

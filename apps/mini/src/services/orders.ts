@@ -154,3 +154,15 @@ export const requestMiniWechatPrepay = async (orderId: string): Promise<MiniWech
   );
   return res.data;
 };
+
+/**
+ * POST /api/mini/orders/:id/sync-pay-state
+ * 支付成功后主动查单同步状态，兜底微信异步通知延迟，返回最新订单。
+ */
+export const syncMiniOrderPayState = async (orderId: string): Promise<MiniOrder> => {
+  const res = await request<MiniOrder>(
+    `${apiPaths.miniOrders}/${encodeURIComponent(orderId)}/sync-pay-state`,
+    { method: "POST" }
+  );
+  return res.data;
+};

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import type { BizOrder, Prisma } from "@prisma/client";
 import { BizOrderStatus, BizRefundStatus } from "@prisma/client";
@@ -225,6 +225,8 @@ const orderStatusesMatchingLabelKeyword = (keyword: string): BizOrderStatus[] =>
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
+
   constructor(
     private readonly productService: ProductService,
     private readonly prisma: PrismaService,
@@ -824,6 +826,36 @@ export class OrderService {
       const msg = e instanceof Error ? e.message : String(e);
       return { code: 502, message: msg, data: null };
     }
+  }
+
+  /**
+   * 小程序：支付成功后主动查单同步状态，兜底微信异步通知延迟/丢失。
+   * 查到 SUCCESS 则标记已支付；其它情况返回当前状态、不报错。
+   */
+  public async syncMiniOrderPayState(userId: string, orderId: string): Promise<ApiEnvelope<Order>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    if ((row.userId ?? "") !== userId) return { code: 403, message: "forbidden", data: null };
+
+    const found = mapRowToOrder(row);
+    // 已不是待付款（回调可能已处理）或未配置真实支付（模拟）时，直接返回当前状态
+    if (found.status !== "pendingPay" || this.wechatPayService.shouldSimulateImmediatePay()) {
+      return { code: 0, message: "ok", data: found };
+    }
+
+    try {
+      const { tradeState, transactionId } = await this.wechatPayService.queryOrderByOutTradeNo(
+        found.id
+      );
+      if (tradeState === "SUCCESS") {
+        await this.markMiniOrderPaidFromNotify(found.id, transactionId || undefined);
+      }
+    } catch (e) {
+      this.logger.warn(`查单同步失败：${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    const latest = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    return { code: 0, message: "ok", data: mapRowToOrder(latest ?? row) };
   }
 
   /** 分配给指定打手的订单（用于收益结算聚合） */

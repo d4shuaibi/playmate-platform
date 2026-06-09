@@ -7,6 +7,7 @@ import {
   fetchMiniOrderDetail,
   requestMiniOrderRefund,
   requestMiniWechatPrepay,
+  syncMiniOrderPayState,
   type MiniOrder,
   type MiniOrderStatus,
   type MiniRefundStatus
@@ -195,6 +196,16 @@ const OrderDetailPage = () => {
         paySign: prepay.payment.paySign
       });
       void Taro.showToast({ title: "支付完成", icon: "success" });
+      // 主动查单兜底：微信异步通知可能延迟，轮询同步直到不再是待付款
+      for (let i = 0; i < 3; i += 1) {
+        try {
+          const latest = await syncMiniOrderPayState(detail.id);
+          if (latest.status !== "pendingPay") break;
+        } catch {
+          // 查单失败不阻断，继续重试 / 最终以 loadDetail 为准
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
       await loadDetail();
     } catch (error: unknown) {
       const errMsg =
