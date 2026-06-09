@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { AdminAuthGuard } from "../auth/admin-auth.guard";
 import { AdminPermissionGuard } from "../auth/admin-permission.guard";
 import { RequireAdminPermissions } from "../auth/admin-permission.decorator";
@@ -36,5 +36,23 @@ export class OrderController {
   @RequireAdminPermissions("order.read")
   async detail(@Param("id") id: string) {
     return this.orderService.getOrder(id);
+  }
+
+  /**
+   * POST /api/orders/:id/refund/approve  通过退款申请（退款 + 取消订单）
+   */
+  @Post(":id/refund/approve")
+  @RequireAdminPermissions("order.write")
+  async approveRefund(@Param("id") id: string) {
+    return this.orderService.approveRefundAdmin(id);
+  }
+
+  /**
+   * POST /api/orders/:id/refund/reject  驳回退款申请
+   */
+  @Post(":id/refund/reject")
+  @RequireAdminPermissions("order.write")
+  async rejectRefund(@Param("id") id: string) {
+    return this.orderService.rejectRefundAdmin(id);
   }
 }

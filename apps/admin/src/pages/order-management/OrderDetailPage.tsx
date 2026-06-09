@@ -1,10 +1,25 @@
 import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Card, Descriptions, Image, Spin, Tag, Typography, message } from "antd";
+import {
+  Button,
+  Card,
+  Descriptions,
+  Image,
+  Popconfirm,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+  message
+} from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getAdminAuthSession } from "../../services/auth/session";
-import { requestOrderDetail } from "../../services/order/api";
-import { type Order, type OrderStatus } from "../../services/order/types";
+import {
+  requestApproveRefund,
+  requestOrderDetail,
+  requestRejectRefund
+} from "../../services/order/api";
+import { type Order, type OrderStatus, type RefundStatus } from "../../services/order/types";
 
 const statusLabelMap: Record<OrderStatus, string> = {
   pendingPay: "待付款",
@@ -24,6 +39,20 @@ const statusColorMap: Record<OrderStatus, string> = {
   cancelled: "default"
 };
 
+const refundStatusLabelMap: Record<RefundStatus, string> = {
+  none: "无",
+  pending: "退款处理中",
+  approved: "已退款",
+  rejected: "已驳回"
+};
+
+const refundStatusColorMap: Record<RefundStatus, string> = {
+  none: "default",
+  pending: "warning",
+  approved: "error",
+  rejected: "default"
+};
+
 export const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -31,9 +60,25 @@ export const OrderDetailPage = () => {
   const accessToken = session?.accessToken ?? "";
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<Order | null>(null);
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
 
   const handleGoBack = () => {
     void navigate("/order-management");
+  };
+
+  const handleRefundDecision = async (decision: "approve" | "reject") => {
+    if (!detail || !accessToken) return;
+    setRefundSubmitting(true);
+    try {
+      const action = decision === "approve" ? requestApproveRefund : requestRejectRefund;
+      const updated = await action(accessToken, detail.id);
+      setDetail(updated);
+      message.success(decision === "approve" ? "已通过退款" : "已驳回退款申请");
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "操作失败");
+    } finally {
+      setRefundSubmitting(false);
+    }
   };
 
   const loadDetail = useCallback(() => {
@@ -93,8 +138,47 @@ export const OrderDetailPage = () => {
                   </Typography.Title>
                   <Typography.Text className="text-slate-500">{detail.orderNo}</Typography.Text>
                 </div>
-                <Tag color={statusColorMap[detail.status]}>{statusLabelMap[detail.status]}</Tag>
+                <Space>
+                  {detail.refundStatus !== "none" ? (
+                    <Tag color={refundStatusColorMap[detail.refundStatus]}>
+                      {refundStatusLabelMap[detail.refundStatus]}
+                    </Tag>
+                  ) : null}
+                  <Tag color={statusColorMap[detail.status]}>{statusLabelMap[detail.status]}</Tag>
+                </Space>
               </div>
+
+              {detail.refundStatus === "pending" ? (
+                <Card
+                  className="rounded-2xl border border-amber-200 bg-amber-50"
+                  bodyStyle={{ padding: 16 }}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <Typography.Text className="text-amber-700">
+                      用户已申请退款，通过将原路退款并取消订单。
+                    </Typography.Text>
+                    <Space>
+                      <Popconfirm
+                        title="通过退款"
+                        description="将调用微信退款并把订单置为已取消，确认通过？"
+                        okText="确认通过"
+                        cancelText="取消"
+                        onConfirm={() => handleRefundDecision("approve")}
+                      >
+                        <Button type="primary" danger loading={refundSubmitting}>
+                          通过退款
+                        </Button>
+                      </Popconfirm>
+                      <Button
+                        onClick={() => handleRefundDecision("reject")}
+                        loading={refundSubmitting}
+                      >
+                        驳回
+                      </Button>
+                    </Space>
+                  </div>
+                </Card>
+              ) : null}
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
                 <div>
@@ -114,6 +198,9 @@ export const OrderDetailPage = () => {
                     <Descriptions.Item label="订单金额">{`¥${detail.amount.toFixed(2)}`}</Descriptions.Item>
                     <Descriptions.Item label="实付金额">{`¥${detail.paidAmount.toFixed(2)}`}</Descriptions.Item>
                     <Descriptions.Item label="支付方式">{detail.payMethod}</Descriptions.Item>
+                    <Descriptions.Item label="退款状态">
+                      {refundStatusLabelMap[detail.refundStatus]}
+                    </Descriptions.Item>
                     <Descriptions.Item label="下单时间">{detail.createdAt}</Descriptions.Item>
                     <Descriptions.Item label="创建人">{detail.createdBy}</Descriptions.Item>
                     <Descriptions.Item label="进度">{progressText || "-"}</Descriptions.Item>

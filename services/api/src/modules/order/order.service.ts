@@ -323,6 +323,8 @@ export class OrderService {
     const pendingPoolRows = await this.prisma.bizOrder.findMany({
       where: {
         status: BizOrderStatus.pendingTake,
+        // 退款申请处理中的订单不进入打手可接单池，避免被接走
+        refundStatus: { not: BizRefundStatus.pending },
         OR: [{ assignedWorkerId: null }, { assignedWorkerId: "" }]
       },
       orderBy: { createdAt: "desc" }
@@ -443,6 +445,9 @@ export class OrderService {
     const order = mapRowToOrder(row);
     if (order.status !== "pendingTake") {
       return { code: 400, message: "order is not pending acceptance", data: null };
+    }
+    if (order.refundStatus === "pending") {
+      return { code: 400, message: "订单退款处理中，暂不可接单", data: null };
     }
     if ((order.assignedWorkerId ?? "").trim().length > 0) {
       return { code: 400, message: "order already assigned", data: null };
@@ -662,6 +667,62 @@ export class OrderService {
     });
 
     return { code: 0, message: "ok", data: { success: true } };
+  }
+
+  /**
+   * 管理端：通过退款申请（refundStatus pending → approved），调用微信退款并取消订单。
+   * 未配置商户参数时跳过真实退款，仅推进状态（便于联调）。
+   */
+  public async approveRefundAdmin(orderId: string): Promise<ApiEnvelope<Order>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    const found = mapRowToOrder(row);
+    if (found.refundStatus !== "pending") {
+      return { code: 400, message: "该订单没有待处理的退款申请", data: null };
+    }
+
+    if (!this.wechatPayService.shouldSimulateImmediatePay()) {
+      try {
+        await this.wechatPayService.refund({
+          outTradeNo: found.id,
+          outRefundNo: `rf-${randomBytes(8).toString("hex")}`,
+          refundFen: Math.max(1, Math.round(found.paidAmount * 100)),
+          totalFen: Math.max(1, Math.round(found.amount * 100)),
+          reason: "用户申请退款"
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { code: 502, message: `微信退款失败：${msg}`, data: null };
+      }
+    }
+
+    const nextRow = await this.prisma.bizOrder.update({
+      where: { id: orderId },
+      data: {
+        refundStatus: BizRefundStatus.approved,
+        status: BizOrderStatus.cancelled,
+        updatedAt: new Date()
+      }
+    });
+    return { code: 0, message: "ok", data: mapRowToOrder(nextRow) };
+  }
+
+  /**
+   * 管理端：驳回退款申请（refundStatus pending → rejected），订单回到原有流程。
+   */
+  public async rejectRefundAdmin(orderId: string): Promise<ApiEnvelope<Order>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    const found = mapRowToOrder(row);
+    if (found.refundStatus !== "pending") {
+      return { code: 400, message: "该订单没有待处理的退款申请", data: null };
+    }
+
+    const nextRow = await this.prisma.bizOrder.update({
+      where: { id: orderId },
+      data: { refundStatus: BizRefundStatus.rejected, updatedAt: new Date() }
+    });
+    return { code: 0, message: "ok", data: mapRowToOrder(nextRow) };
   }
 
   /** 统计小程序 Tab 数量（基于已筛选的当前用户订单列表） */

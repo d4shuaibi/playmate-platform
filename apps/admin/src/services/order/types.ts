@@ -6,6 +6,8 @@ export type OrderStatus =
   | "done"
   | "cancelled";
 
+export type RefundStatus = "none" | "pending" | "approved" | "rejected";
+
 export type OrderProgressStep = {
   key: "pendingTake" | "serving" | "pendingDone" | "done";
   label: string;
@@ -22,6 +24,7 @@ export type Order = {
   id: string;
   orderNo: string;
   status: OrderStatus;
+  refundStatus: RefundStatus;
   packageTag: string;
   serviceTitle: string;
   amount: number;
