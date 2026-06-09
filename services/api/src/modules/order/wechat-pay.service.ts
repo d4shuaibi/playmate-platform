@@ -93,7 +93,11 @@ export class WechatPayService {
   }
 
   shouldSimulateImmediatePay(): boolean {
-    return this.devSimulate || !this.isLiveConfigured();
+    if (this.devSimulate) return true;
+    // 生产环境下，配置不全时绝不自动“模拟支付成功”，避免漏配 WECHAT_PAY_* 导致订单被免费置为已支付；
+    // 此时走真实下单分支会抛出明确错误，便于排查。
+    if ((process.env.NODE_ENV ?? "") === "production") return false;
+    return !this.isLiveConfigured();
   }
 
   /**
