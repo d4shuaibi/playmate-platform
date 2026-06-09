@@ -1,15 +1,33 @@
-import { ArrowLeftOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, InputNumber, Switch, Typography, message, Spin } from "antd";
+import { ArrowLeftOutlined, CameraOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  InputNumber,
+  Switch,
+  Typography,
+  Upload,
+  message,
+  Spin
+} from "antd";
+import type { UploadFile } from "antd/es/upload/interface";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getAdminAuthSession } from "../../services/auth/session";
 import { requestBannerDetail, requestUpdateBanner } from "../../services/home-content/api";
+import { requestUploadFile } from "../../services/customer-service/api";
+import {
+  buildDoneUploadFileFromUrl,
+  getOriginFileFromList,
+  normalizeUploadFiles,
+  resolveUploadUrlFromFileList
+} from "../product-management/ProductFormUtils";
 
 type BannerFormValues = {
   title: string;
   subtitle: string;
-  imageUrl: string;
-  linkUrl?: string;
+  imageFiles: UploadFile[];
   sortOrder?: number;
   enabled?: boolean;
 };
@@ -31,8 +49,9 @@ export const EditBannerPage = () => {
         form.setFieldsValue({
           title: banner.title,
           subtitle: banner.subtitle,
-          imageUrl: banner.imageUrl,
-          linkUrl: banner.linkUrl,
+          imageFiles: banner.imageUrl
+            ? [buildDoneUploadFileFromUrl({ uid: banner.id, url: banner.imageUrl })]
+            : [],
           sortOrder: banner.sortOrder,
           enabled: banner.enabled
         });
@@ -52,11 +71,20 @@ export const EditBannerPage = () => {
     if (!accessToken || !id) return;
     setSubmitting(true);
     try {
+      let imageUrl = resolveUploadUrlFromFileList(values.imageFiles);
+      const originFile = getOriginFileFromList(values.imageFiles);
+      if (originFile) {
+        const uploaded = await requestUploadFile(accessToken, originFile);
+        imageUrl = uploaded.url;
+      }
+      if (!imageUrl) {
+        message.error("请上传轮播图图片");
+        return;
+      }
       await requestUpdateBanner(accessToken, id, {
         title: values.title,
         subtitle: values.subtitle,
-        imageUrl: values.imageUrl,
-        linkUrl: values.linkUrl || null,
+        imageUrl,
         sortOrder: values.sortOrder ?? 0,
         enabled: values.enabled ?? true
       });
@@ -108,15 +136,33 @@ export const EditBannerPage = () => {
           </Form.Item>
 
           <Form.Item
-            label="图片地址"
-            name="imageUrl"
-            rules={[{ required: true, message: "请输入图片地址" }]}
+            label="轮播图图片"
+            name="imageFiles"
+            valuePropName="fileList"
+            getValueFromEvent={normalizeUploadFiles}
+            rules={[
+              {
+                validator: (_, fileList: UploadFile[]) => {
+                  const hasUrl = Boolean(resolveUploadUrlFromFileList(fileList));
+                  const hasFile = Boolean(getOriginFileFromList(fileList));
+                  if (hasUrl || hasFile) return Promise.resolve();
+                  return Promise.reject(new Error("请上传轮播图图片"));
+                }
+              }
+            ]}
           >
-            <Input placeholder="请输入图片URL" />
-          </Form.Item>
-
-          <Form.Item label="链接地址（可选）" name="linkUrl">
-            <Input placeholder="点击轮播图跳转的链接（可选）" />
+            <Upload
+              listType="picture-card"
+              maxCount={1}
+              beforeUpload={() => {
+                return false;
+              }}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <CameraOutlined />
+                <span className="text-xs">上传图片</span>
+              </div>
+            </Upload>
           </Form.Item>
 
           <Form.Item label="排序（数字越小越靠前）" name="sortOrder">
