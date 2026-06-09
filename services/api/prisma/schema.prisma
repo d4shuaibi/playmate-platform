@@ -25,7 +25,7 @@ model User {
   wechatUnionId String? @unique
 
   nickname  String?
-  avatarUrl String?
+  avatarUrl String? @db.Text
   /// 小程序钱包可用余额（业务演示字段）
   walletBalance Decimal @default(0) @db.Decimal(12, 2)
   /// 微信 phonenumber.getPhoneNumber 换取的手机号（含区号等，与微信返回一致）
@@ -158,8 +158,8 @@ model CustomerServiceAgent {
   nickname    String
   wechatId    String
   disabled    Boolean @default(false)
-  avatarUrl   String
-  wechatQrUrl String
+  avatarUrl   String  @db.Text
+  wechatQrUrl String  @db.Text
 
   @@index([disabled])
 }
@@ -241,7 +241,7 @@ model BizOrder {
   serviceTitle String
   amount      Decimal          @db.Decimal(12, 2)
   quantityText String
-  coverImage  String
+  coverImage  String           @db.Text
 
   payMethod   String
   paidAmount  Decimal          @db.Decimal(12, 2)
