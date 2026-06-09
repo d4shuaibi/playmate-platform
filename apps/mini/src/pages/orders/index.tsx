@@ -90,16 +90,23 @@ const formatMoney = (amount: number): string => {
 const mapOrderToCard = (order: MiniOrder): OrderCard => {
   const statusKey = order.status;
   const actionLabel = statusKey === "pendingPay" ? "去支付" : "查看详情";
+  // 退款申请处理中/已退款时，状态文案优先展示退款进度
+  const refundLabel =
+    order.refundStatus === "pending"
+      ? "退款中"
+      : order.refundStatus === "approved"
+        ? "已退款"
+        : null;
   return {
     id: order.id,
     orderNo: order.orderNo,
     statusKey,
-    statusLabel: STATUS_LABEL[statusKey],
+    statusLabel: refundLabel ?? STATUS_LABEL[statusKey],
     title: order.serviceTitle,
     createdAtText: `下单时间：${order.createdAt}`,
     amountText: formatMoney(order.amount),
     planText: order.packageTag,
-    accent: resolveAccent(statusKey),
+    accent: refundLabel ? "error" : resolveAccent(statusKey),
     actionLabel,
     coverImage: order.coverImage
   };

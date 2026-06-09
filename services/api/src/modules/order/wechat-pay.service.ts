@@ -169,6 +169,67 @@ export class WechatPayService {
   }
 
   /**
+   * 申请退款（商户 API v3）。原路退回到付款账户。
+   * 文档：https://pay.weixin.qq.com/doc/v3/merchant/4012791898（退款 API）
+   */
+  async refund(params: {
+    /** 原支付的商户订单号（= 业务订单 id） */
+    outTradeNo: string;
+    /** 商户退款单号（自定义，唯一） */
+    outRefundNo: string;
+    /** 退款金额，单位：分 */
+    refundFen: number;
+    /** 订单总金额，单位：分 */
+    totalFen: number;
+    reason?: string;
+  }): Promise<{ refundId: string; status: string }> {
+    if (!this.isLiveConfigured()) {
+      throw new Error("微信支付商户参数未配置完整（WECHAT_PAY_*）");
+    }
+
+    const urlPath = "/v3/refund/domestic/refunds";
+    const host = "https://api.mch.weixin.qq.com";
+    const bodyObj: Record<string, unknown> = {
+      out_trade_no: params.outTradeNo,
+      out_refund_no: params.outRefundNo,
+      amount: {
+        refund: params.refundFen,
+        total: params.totalFen,
+        currency: "CNY"
+      }
+    };
+    if (params.reason) bodyObj.reason = params.reason.slice(0, 80);
+    if (this.notifyUrl) bodyObj.notify_url = this.notifyUrl;
+
+    const bodyStr = JSON.stringify(bodyObj);
+    const authorization = this.buildAuthorizationHeader("POST", urlPath, bodyStr);
+
+    const res = await fetch(`${host}${urlPath}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: authorization,
+        "User-Agent": "PlaymatePlatform/1.0"
+      },
+      body: bodyStr
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      this.logger.warn(`Wechat refund HTTP ${res.status}: ${text}`);
+      throw new Error(`微信退款失败（HTTP ${res.status}）`);
+    }
+
+    const parsed = JSON.parse(text) as { refund_id?: string; status?: string };
+    if (!parsed?.refund_id) {
+      this.logger.warn(`Wechat refund unexpected body: ${text}`);
+      throw new Error("微信退款返回异常");
+    }
+    return { refundId: parsed.refund_id, status: parsed.status ?? "" };
+  }
+
+  /**
    * 生成小程序调起支付参数（RSA 签名 paySign）。
    */
   buildMiniProgramPaymentParams(prepayId: string): MiniProgramPaymentParams {

@@ -64,3 +64,31 @@ export const requestOrderDetail = async (accessToken: string, orderId: string) =
 
   return unwrapEnvelope<Order>(response);
 };
+
+const postRefundDecision = async (
+  accessToken: string,
+  orderId: string,
+  decision: "approve" | "reject"
+) => {
+  const token = ensureAccessToken(accessToken);
+  const response = await fetch(
+    buildUrl(`/orders/${encodeURIComponent(orderId)}/refund/${decision}`),
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...buildAuthHeader(token)
+      }
+    }
+  );
+
+  return unwrapEnvelope<Order>(response);
+};
+
+/** 通过退款申请（退款 + 取消订单） */
+export const requestApproveRefund = (accessToken: string, orderId: string) =>
+  postRefundDecision(accessToken, orderId, "approve");
+
+/** 驳回退款申请 */
+export const requestRejectRefund = (accessToken: string, orderId: string) =>
+  postRefundDecision(accessToken, orderId, "reject");

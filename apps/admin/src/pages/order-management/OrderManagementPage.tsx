@@ -120,8 +120,15 @@ export const OrderManagementPage = () => {
       dataIndex: "status",
       key: "status",
       width: 120,
-      render: (status: OrderStatus) => (
-        <Tag color={statusColorMap[status]}>{statusLabelMap[status]}</Tag>
+      render: (status: OrderStatus, row) => (
+        <div className="flex flex-col items-start gap-1">
+          <Tag color={statusColorMap[status]}>{statusLabelMap[status]}</Tag>
+          {row.refundStatus === "pending" ? (
+            <Tag color="warning">退款待处理</Tag>
+          ) : row.refundStatus === "approved" ? (
+            <Tag color="error">已退款</Tag>
+          ) : null}
+        </div>
       )
     },
     {
