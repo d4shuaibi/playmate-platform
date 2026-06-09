@@ -25,4 +25,4 @@ COPY --from=build /out/ ./
 COPY --from=build /repo/services/api/dist ./dist
 
 EXPOSE 3000
-CMD ["sh", "-c", "node_modules/.bin/prisma db push --skip-generate && node dist/main.js"]
+CMD ["sh", "-c", "node dist/main.js & node_modules/.bin/prisma db push --skip-generate || true; wait"]
