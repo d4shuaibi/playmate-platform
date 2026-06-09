@@ -51,12 +51,14 @@ export class WechatPayNotifyController {
         typeof req.rawBody !== "undefined"
           ? req.rawBody.toString("utf8")
           : JSON.stringify(req.body ?? {});
+      this.logger.log(`收到微信支付通知回调，body 长度=${rawText.length}`);
       const headers = req.headers as IncomingHttpHeaders;
       if (!this.wechatPayService.verifyNotifySignature(headers, rawText)) {
         return retry("验签失败");
       }
 
       const notify = JSON.parse(rawText) as NotifyEnvelope;
+      this.logger.log(`支付通知 event_type=${notify.event_type ?? "(空)"}`);
 
       // 非支付成功事件（如退款通知等）直接确认，避免无意义重试
       if (notify.event_type !== "TRANSACTION.SUCCESS") {
@@ -85,6 +87,7 @@ export class WechatPayNotifyController {
       }
 
       await this.orderService.markMiniOrderPaidFromNotify(outTradeNo, wxTx);
+      this.logger.log(`支付通知已处理，订单 ${outTradeNo} 标记为已支付`);
       return ack();
     } catch (e) {
       this.logger.warn(`处理支付通知异常：${e instanceof Error ? e.message : String(e)}`);

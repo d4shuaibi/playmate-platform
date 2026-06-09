@@ -847,11 +847,14 @@ export class OrderService {
       const { tradeState, transactionId } = await this.wechatPayService.queryOrderByOutTradeNo(
         found.id
       );
+      this.logger.log(`查单同步 订单=${found.id} trade_state=${tradeState || "(空)"}`);
       if (tradeState === "SUCCESS") {
         await this.markMiniOrderPaidFromNotify(found.id, transactionId || undefined);
       }
     } catch (e) {
-      this.logger.warn(`查单同步失败：${e instanceof Error ? e.message : String(e)}`);
+      this.logger.warn(
+        `查单同步失败 订单=${found.id}：${e instanceof Error ? e.message : String(e)}`
+      );
     }
 
     const latest = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
