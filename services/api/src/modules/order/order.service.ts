@@ -93,13 +93,20 @@ const buildProgress = (status: OrderStatus) => {
   }));
 };
 
-/** 下单时间展示 */
+/** 北京时间相对 UTC 的偏移（毫秒） */
+const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+/**
+ * 时间展示：固定按北京时间（UTC+8）格式化。
+ * 先把 UTC 绝对时刻偏移 +8h，再用 getUTC* 读取，避免依赖后端容器时区。
+ */
 const formatCreatedAtFromDate = (d: Date): string => {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
+  const bj = new Date(d.getTime() + BEIJING_OFFSET_MS);
+  const yyyy = bj.getUTCFullYear();
+  const mm = String(bj.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(bj.getUTCDate()).padStart(2, "0");
+  const hh = String(bj.getUTCHours()).padStart(2, "0");
+  const mi = String(bj.getUTCMinutes()).padStart(2, "0");
   return `${yyyy}.${mm}.${dd} ${hh}:${mi}`;
 };
 
