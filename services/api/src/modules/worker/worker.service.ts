@@ -310,6 +310,11 @@ export class WorkerService {
         this.prisma.user.update({
           where: { id: found.userId },
           data: { role: UserRole.WORKER }
+        }),
+        // 吊销旧 refresh token，迫使重新登录，确保新 access token 携带 role=worker
+        this.prisma.refreshToken.updateMany({
+          where: { userId: found.userId, revokedAt: null },
+          data: { revokedAt: ts }
         })
       ]);
       return { code: 0, message: "ok", data: { success: true } };
@@ -412,6 +417,11 @@ export class WorkerService {
       this.prisma.user.update({
         where: { id: account.userId },
         data: { role: input.status === "active" ? UserRole.WORKER : UserRole.USER }
+      }),
+      // 吊销旧 refresh token，迫使重新登录，确保新 access token 携带正确 role
+      this.prisma.refreshToken.updateMany({
+        where: { userId: account.userId, revokedAt: null },
+        data: { revokedAt: new Date() }
       })
     ]);
     return { code: 0, message: "ok", data: { success: true } };
