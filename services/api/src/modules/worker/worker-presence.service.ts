@@ -1,20 +1,25 @@
 import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../../prisma/prisma.service";
 
 export type WorkerPresenceMode = "online" | "rest";
 
-/**
- * 打手在线状态（内存存储；重启后失效）。
- */
 @Injectable()
 export class WorkerPresenceService {
-  private readonly modes = new Map<string, WorkerPresenceMode>();
+  constructor(private readonly prisma: PrismaService) {}
 
-  public getMode(workerId: string): WorkerPresenceMode {
-    return this.modes.get(workerId) ?? "rest";
+  public async getMode(userId: string): Promise<WorkerPresenceMode> {
+    const account = await this.prisma.workerAccount.findUnique({
+      where: { userId },
+      select: { presenceMode: true }
+    });
+    return (account?.presenceMode as WorkerPresenceMode) ?? "rest";
   }
 
-  public setMode(workerId: string, mode: WorkerPresenceMode): WorkerPresenceMode {
-    this.modes.set(workerId, mode);
+  public async setMode(userId: string, mode: WorkerPresenceMode): Promise<WorkerPresenceMode> {
+    await this.prisma.workerAccount.update({
+      where: { userId },
+      data: { presenceMode: mode }
+    });
     return mode;
   }
 }

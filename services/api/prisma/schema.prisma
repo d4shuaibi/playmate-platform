@@ -200,6 +200,7 @@ model WorkerAccount {
   assessmentType WorkerAssessmentKind
   joinStatus     WorkerJoinApplicationStatus @default(approved)
   status         WorkerAccountOperationalStatus @default(active)
+  presenceMode   String @default("rest")
 
   @@index([joinStatus])
   @@index([status])

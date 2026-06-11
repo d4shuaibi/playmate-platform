@@ -39,7 +39,7 @@ export class WorkerWorkbenchMiniController {
   async workbench(@Req() req: RequestWithMini) {
     const workerId = req.miniAuth?.sub;
     if (!workerId) throw new UnauthorizedException();
-    const mode = this.presenceService.getMode(workerId);
+    const mode = await this.presenceService.getMode(workerId);
     return this.orderService.getWorkerWorkbench(workerId, mode);
   }
 
@@ -54,7 +54,7 @@ export class WorkerWorkbenchMiniController {
       body?.mode === "online"
         ? ("online" satisfies WorkerPresenceMode)
         : ("rest" satisfies WorkerPresenceMode);
-    const saved = this.presenceService.setMode(workerId, next);
+    const saved = await this.presenceService.setMode(workerId, next);
     return { code: 0, message: "ok", data: { mode: saved } };
   }
 

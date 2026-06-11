@@ -188,6 +188,21 @@ export const request = async <TData>(
     options.body
   );
 
+  // 401/403 先尝试刷新 token 后重试一次：
+  // - 401：access token 过期
+  // - 403：token 里的 role 过时（如审核通过后 role 从 user 升为 worker，旧 token 还是 user）
+  if (
+    response.statusCode &&
+    (response.statusCode === 401 || response.statusCode === 403) &&
+    options.skipAuth !== true &&
+    options.__retried401 !== true
+  ) {
+    const refreshed = await refreshAccessTokenIfNeeded(true);
+    if (refreshed) {
+      return request<TData>(path, { ...options, __retried401: true });
+    }
+  }
+
   if (response.statusCode && response.statusCode >= 400) {
     throw new Error(`HTTP ${response.statusCode}：${path}`);
   }
