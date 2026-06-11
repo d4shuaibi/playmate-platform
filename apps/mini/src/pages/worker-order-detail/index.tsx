@@ -26,9 +26,9 @@ type WorkerStatusPresentation = {
 
 const STAGE_PRESENTATION: Record<WorkerOrderStage, WorkerStatusPresentation> = {
   pool: {
-    title: "待接单",
-    description: "订单在池中等待打手接单，接单后将进入执行阶段。",
-    sessionText: "WAITING POOL"
+    title: "待开始",
+    description: "订单已指派给你，点击开始执行后进入执行阶段。",
+    sessionText: "READY TO START"
   },
   serving: {
     title: "进行中",
@@ -196,7 +196,7 @@ const WorkerOrderDetailPage = () => {
     if (stage === "pool") {
       return (
         <View className="workerOrderDetail__primaryBtn" onClick={() => void handleStartOrder()}>
-          <Text className="workerOrderDetail__primaryBtnText">开始接单</Text>
+          <Text className="workerOrderDetail__primaryBtnText">开始执行</Text>
         </View>
       );
     }
@@ -299,9 +299,9 @@ const WorkerOrderDetailPage = () => {
             <Text className="workerOrderDetail__kvValue">{detail.orderNo}</Text>
           </View>
           <View className="workerOrderDetail__kvRow">
-            <Text className="workerOrderDetail__kvKey">分配时间</Text>
+            <Text className="workerOrderDetail__kvKey">指派时间</Text>
             <Text className="workerOrderDetail__kvValue">
-              {detail.assignedAt?.trim() ? detail.assignedAt : "尚未接单"}
+              {detail.assignedAt?.trim() ? detail.assignedAt : "尚未指派"}
             </Text>
           </View>
           <View className="workerOrderDetail__kvRow">

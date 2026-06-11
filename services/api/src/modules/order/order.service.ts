@@ -1,7 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { randomBytes } from "crypto";
 import type { BizOrder, Prisma } from "@prisma/client";
-import { BizOrderStatus, BizRefundStatus } from "@prisma/client";
+import {
+  BizOrderStatus,
+  BizRefundStatus,
+  WorkerAccountOperationalStatus,
+  WorkerJoinApplicationStatus
+} from "@prisma/client";
 import { decimalLikeToNumber } from "../../lib/decimal-like";
 import { PrismaService } from "../../prisma/prisma.service";
 import { ProductService } from "../product/product.service";
@@ -163,9 +168,9 @@ const mapRowToOrder = (row: BizOrder): Order => {
   };
 };
 
-/** 打手侧订单阶段（pool=待_pool 接单；老板端 pendingTake 且无分配） */
+/** 打手侧订单阶段（pool=已指派给本人、待开始执行） */
 const deriveWorkerStage = (order: Order): WorkerOrderStage => {
-  if (order.status === "pendingTake" && !(order.assignedWorkerId ?? "").trim()) {
+  if (order.status === "pendingTake") {
     return "pool";
   }
   if (order.status === "serving") return "serving";
@@ -325,9 +330,10 @@ export class OrderService {
     const pendingPoolRows = await this.prisma.bizOrder.findMany({
       where: {
         status: BizOrderStatus.pendingTake,
-        // 退款申请处理中的订单不进入打手可接单池，避免被接走
+        // 退款申请处理中的订单暂不展示，避免打手开始执行
         refundStatus: { not: BizRefundStatus.pending },
-        OR: [{ assignedWorkerId: null }, { assignedWorkerId: "" }]
+        // 仅展示老板指派给本人、待开始执行的订单（不再有公共抢单池）
+        assignedWorkerId: workerId
       },
       orderBy: { createdAt: "desc" }
     });
@@ -414,7 +420,7 @@ export class OrderService {
     };
   }
 
-  /** 打手：订单详情（池内待接单订单任何人可看详情；已接单仅本人） */
+  /** 打手：订单详情（仅受指派的本人可查看） */
   public async getWorkerOrder(
     workerId: string,
     orderId: string
@@ -423,9 +429,7 @@ export class OrderService {
     if (!row) return { code: 404, message: "order not found", data: null };
     const found = mapRowToOrder(row);
 
-    const unassignedPool = found.status === "pendingTake" && !(found.assignedWorkerId ?? "").trim();
-    const isAssignee = found.assignedWorkerId === workerId;
-    if (!unassignedPool && !isAssignee) {
+    if (found.assignedWorkerId !== workerId) {
       return { code: 403, message: "forbidden", data: null };
     }
 
@@ -436,7 +440,7 @@ export class OrderService {
     };
   }
 
-  /** 打手：接单并开始执行（pendingTake → serving） */
+  /** 打手：开始执行老板指派给本人的订单（pendingTake → serving） */
   public async startWorkerOrder(
     workerId: string,
     orderId: string
@@ -445,22 +449,20 @@ export class OrderService {
     if (!row) return { code: 404, message: "order not found", data: null };
 
     const order = mapRowToOrder(row);
+    if (order.assignedWorkerId !== workerId) {
+      return { code: 403, message: "该订单未指派给你", data: null };
+    }
     if (order.status !== "pendingTake") {
       return { code: 400, message: "order is not pending acceptance", data: null };
     }
     if (order.refundStatus === "pending") {
-      return { code: 400, message: "订单退款处理中，暂不可接单", data: null };
-    }
-    if ((order.assignedWorkerId ?? "").trim().length > 0) {
-      return { code: 400, message: "order already assigned", data: null };
+      return { code: 400, message: "订单退款处理中，暂不可开始", data: null };
     }
 
     const nextRow = await this.prisma.bizOrder.update({
       where: { id: orderId },
       data: {
         status: BizOrderStatus.serving,
-        assignedWorkerId: workerId,
-        assignedAt: formatCreatedAtFromDate(new Date()),
         updatedAt: new Date()
       }
     });
@@ -723,6 +725,74 @@ export class OrderService {
     const nextRow = await this.prisma.bizOrder.update({
       where: { id: orderId },
       data: { refundStatus: BizRefundStatus.rejected, updatedAt: new Date() }
+    });
+    return { code: 0, message: "ok", data: mapRowToOrder(nextRow) };
+  }
+
+  /**
+   * 管理端：将待接单订单指派给指定打手（按打手的 userId）。
+   * 仅 pendingTake 且无退款处理中的订单可指派；已指派可改派。
+   */
+  public async assignOrderToWorker(
+    orderId: string,
+    workerUserId: string
+  ): Promise<ApiEnvelope<Order>> {
+    const targetUserId = (workerUserId ?? "").trim();
+    if (!targetUserId) return { code: 400, message: "workerId is required", data: null };
+
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    const found = mapRowToOrder(row);
+
+    if (found.status !== "pendingTake") {
+      return { code: 400, message: "仅待接单订单可指派", data: null };
+    }
+    if (found.refundStatus === "pending") {
+      return { code: 400, message: "订单退款处理中，暂不可指派", data: null };
+    }
+
+    const worker = await this.prisma.workerAccount.findFirst({
+      where: {
+        userId: targetUserId,
+        status: WorkerAccountOperationalStatus.active,
+        joinStatus: WorkerJoinApplicationStatus.approved
+      }
+    });
+    if (!worker) {
+      return { code: 400, message: "打手不存在或未启用", data: null };
+    }
+
+    const nextRow = await this.prisma.bizOrder.update({
+      where: { id: orderId },
+      data: {
+        assignedWorkerId: targetUserId,
+        assignedAt: formatCreatedAtFromDate(new Date()),
+        updatedAt: new Date()
+      }
+    });
+    return { code: 0, message: "ok", data: mapRowToOrder(nextRow) };
+  }
+
+  /** 管理端：撤销指派（仅打手尚未开始执行，即 pendingTake 时可撤销） */
+  public async unassignOrder(orderId: string): Promise<ApiEnvelope<Order>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    const found = mapRowToOrder(row);
+
+    if (found.status !== "pendingTake") {
+      return { code: 400, message: "订单已开始执行，不可撤销指派", data: null };
+    }
+    if (!(found.assignedWorkerId ?? "").trim()) {
+      return { code: 400, message: "该订单尚未指派", data: null };
+    }
+
+    const nextRow = await this.prisma.bizOrder.update({
+      where: { id: orderId },
+      data: {
+        assignedWorkerId: null,
+        assignedAt: "",
+        updatedAt: new Date()
+      }
     });
     return { code: 0, message: "ok", data: mapRowToOrder(nextRow) };
   }

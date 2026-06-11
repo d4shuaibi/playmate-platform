@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { AdminAuthGuard } from "../auth/admin-auth.guard";
 import { AdminPermissionGuard } from "../auth/admin-permission.guard";
 import { RequireAdminPermissions } from "../auth/admin-permission.decorator";
@@ -54,5 +54,23 @@ export class OrderController {
   @RequireAdminPermissions("order.write")
   async rejectRefund(@Param("id") id: string) {
     return this.orderService.rejectRefundAdmin(id);
+  }
+
+  /**
+   * POST /api/orders/:id/assign  指派 / 改派订单给打手  body: `{ workerId }`
+   */
+  @Post(":id/assign")
+  @RequireAdminPermissions("order.write")
+  async assign(@Param("id") id: string, @Body() body: { workerId?: string }) {
+    return this.orderService.assignOrderToWorker(id, body?.workerId ?? "");
+  }
+
+  /**
+   * POST /api/orders/:id/unassign  撤销指派
+   */
+  @Post(":id/unassign")
+  @RequireAdminPermissions("order.write")
+  async unassign(@Param("id") id: string) {
+    return this.orderService.unassignOrder(id);
   }
 }

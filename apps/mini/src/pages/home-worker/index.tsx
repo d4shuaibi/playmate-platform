@@ -208,7 +208,7 @@ const WorkerHomePage = () => {
 
           <View className="workerCommand__sectionHeader">
             <View className="workerCommand__sectionLeft">
-              <Text className="workerCommand__sectionTitle">待处理订单</Text>
+              <Text className="workerCommand__sectionTitle">待开始订单</Text>
               <Text className="workerCommand__sectionCount">
                 {!loading ? `${pendingOrders.length} Active` : "…"}
               </Text>
@@ -258,7 +258,7 @@ const WorkerHomePage = () => {
 
           {!loading && pendingOrders.length === 0 ? (
             <View className="workerCommand__emptyPool">
-              <Text className="workerCommand__emptyPoolText">暂无待接单订单</Text>
+              <Text className="workerCommand__emptyPoolText">暂无指派给你的订单</Text>
             </View>
           ) : null}
         </View>

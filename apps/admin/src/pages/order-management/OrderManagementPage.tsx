@@ -1,11 +1,25 @@
 import { ReloadOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, Select, Table, Tag, Typography, message } from "antd";
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Select,
+  Table,
+  Tag,
+  Typography,
+  message
+} from "antd";
 import { type ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAdminAuthSession } from "../../services/auth/session";
-import { requestOrders } from "../../services/order/api";
+import { requestAssignOrder, requestOrders, requestUnassignOrder } from "../../services/order/api";
 import { type Order, type OrderStatus } from "../../services/order/types";
+import { requestWorkers } from "../../services/worker/api";
+import { type Worker } from "../../services/worker/types";
 
 type StatusFilter = "all" | OrderStatus;
 
@@ -35,6 +49,16 @@ export const OrderManagementPage = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [rows, setRows] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [assignTarget, setAssignTarget] = useState<Order | null>(null);
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string>("");
+  const [assigning, setAssigning] = useState(false);
+
+  const workerNameByUserId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const w of workers) map.set(w.userId, w.realName);
+    return map;
+  }, [workers]);
 
   const currentQuery = useMemo(() => {
     return {
@@ -61,9 +85,26 @@ export const OrderManagementPage = () => {
     [accessToken]
   );
 
+  const loadWorkers = useCallback(() => {
+    if (!accessToken) return;
+    void (async () => {
+      try {
+        const data = await requestWorkers(accessToken, {
+          joinStatus: "approved",
+          status: "active",
+          pageSize: 100
+        });
+        setWorkers(data.items);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : "加载打手列表失败");
+      }
+    })();
+  }, [accessToken]);
+
   useEffect(() => {
     loadOrders();
-  }, [loadOrders]);
+    loadWorkers();
+  }, [loadOrders, loadWorkers]);
 
   const handleRefresh = () => {
     loadOrders(currentQuery);
@@ -82,6 +123,48 @@ export const OrderManagementPage = () => {
 
   const handleViewDetail = (row: Order) => {
     void navigate(`/order-management/detail/${encodeURIComponent(row.id)}`);
+  };
+
+  const handleOpenAssign = (row: Order) => {
+    setAssignTarget(row);
+    setSelectedWorkerId(row.assignedWorkerId || "");
+  };
+
+  const handleCloseAssign = () => {
+    setAssignTarget(null);
+    setSelectedWorkerId("");
+  };
+
+  const handleConfirmAssign = () => {
+    if (!assignTarget || !selectedWorkerId) {
+      message.warning("请选择要指派的打手");
+      return;
+    }
+    setAssigning(true);
+    void (async () => {
+      try {
+        await requestAssignOrder(accessToken, assignTarget.id, selectedWorkerId);
+        message.success("指派成功");
+        handleCloseAssign();
+        loadOrders(currentQuery);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : "指派失败");
+      } finally {
+        setAssigning(false);
+      }
+    })();
+  };
+
+  const handleUnassign = (row: Order) => {
+    void (async () => {
+      try {
+        await requestUnassignOrder(accessToken, row.id);
+        message.success("已撤销指派");
+        loadOrders(currentQuery);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : "撤销指派失败");
+      }
+    })();
   };
 
   const columns: ColumnsType<Order> = [
@@ -144,17 +227,49 @@ export const OrderManagementPage = () => {
       width: 120
     },
     {
+      title: "指派打手",
+      key: "assignedWorker",
+      width: 120,
+      render: (_, row) => {
+        const assignedId = row.assignedWorkerId?.trim();
+        if (!assignedId) return <span className="text-xs text-slate-400">未指派</span>;
+        const name = workerNameByUserId.get(assignedId);
+        return <Tag color="blue">{name ?? assignedId}</Tag>;
+      }
+    },
+    {
       title: "操作",
       key: "actions",
       align: "left",
-      width: 120,
-      render: (_, row) => (
-        <div className="flex flex-wrap items-center justify-start gap-1">
-          <Button type="text" size="small" onClick={() => handleViewDetail(row)}>
-            查看详情
-          </Button>
-        </div>
-      )
+      width: 200,
+      render: (_, row) => {
+        const assigned = Boolean(row.assignedWorkerId?.trim());
+        const canAssign = row.status === "pendingTake" && row.refundStatus !== "pending";
+        return (
+          <div className="flex flex-wrap items-center justify-start gap-1">
+            <Button type="text" size="small" onClick={() => handleViewDetail(row)}>
+              查看详情
+            </Button>
+            {canAssign ? (
+              <Button type="text" size="small" onClick={() => handleOpenAssign(row)}>
+                {assigned ? "改派" : "指派"}
+              </Button>
+            ) : null}
+            {canAssign && assigned ? (
+              <Popconfirm
+                title="确认撤销指派？"
+                okText="撤销"
+                cancelText="取消"
+                onConfirm={() => handleUnassign(row)}
+              >
+                <Button type="text" size="small" danger>
+                  撤销
+                </Button>
+              </Popconfirm>
+            ) : null}
+          </div>
+        );
+      }
     }
   ];
 
@@ -220,6 +335,36 @@ export const OrderManagementPage = () => {
           pagination={{ pageSize: 10 }}
         />
       </Card>
+
+      <Modal
+        title={assignTarget?.assignedWorkerId?.trim() ? "改派订单" : "指派订单"}
+        open={assignTarget != null}
+        onOk={handleConfirmAssign}
+        onCancel={handleCloseAssign}
+        okText="确认指派"
+        cancelText="取消"
+        confirmLoading={assigning}
+        okButtonProps={{ disabled: !selectedWorkerId }}
+      >
+        <div className="space-y-3">
+          <p className="!mb-0 text-sm text-slate-500">
+            订单：{assignTarget?.serviceTitle}（{assignTarget?.orderNo}）
+          </p>
+          <Select
+            showSearch
+            className="w-full"
+            placeholder="选择打手"
+            value={selectedWorkerId || undefined}
+            onChange={(value) => setSelectedWorkerId(value)}
+            optionFilterProp="label"
+            options={workers.map((w) => ({
+              label: `${w.realName}（${w.phone}）`,
+              value: w.userId
+            }))}
+            notFoundContent="暂无可用打手"
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

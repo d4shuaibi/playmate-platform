@@ -5,6 +5,7 @@ import type {
   WorkerJoinApplication as WorkerJoinApplicationRow
 } from "@prisma/client";
 import {
+  UserRole,
   WorkerAccountOperationalStatus,
   WorkerAssessmentKind,
   WorkerJoinApplicationStatus
@@ -304,6 +305,11 @@ export class WorkerService {
             status: WorkerAccountOperationalStatus.active,
             updatedAt: ts
           }
+        }),
+        // 通过审核后将账号角色提升为 WORKER，否则登录小程序仍是 user，访问打手接口会 403
+        this.prisma.user.update({
+          where: { id: found.userId },
+          data: { role: UserRole.WORKER }
         })
       ]);
       return { code: 0, message: "ok", data: { success: true } };
@@ -391,17 +397,23 @@ export class WorkerService {
         ? WorkerAccountOperationalStatus.active
         : WorkerAccountOperationalStatus.disabled;
 
-    try {
-      await this.prisma.workerAccount.update({
+    const account = await this.prisma.workerAccount.findUnique({ where: { id: input.id } });
+    if (!account) return { code: 404, message: "Worker not found", data: null };
+
+    await this.prisma.$transaction([
+      this.prisma.workerAccount.update({
         where: { id: input.id },
         data: {
           status: op,
           updatedAt: new Date()
         }
-      });
-      return { code: 0, message: "ok", data: { success: true } };
-    } catch {
-      return { code: 404, message: "Worker not found", data: null };
-    }
+      }),
+      // 启停时同步账号角色：停用后回退为 user，避免仍可访问打手接口
+      this.prisma.user.update({
+        where: { id: account.userId },
+        data: { role: input.status === "active" ? UserRole.WORKER : UserRole.USER }
+      })
+    ]);
+    return { code: 0, message: "ok", data: { success: true } };
   }
 }

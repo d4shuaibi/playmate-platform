@@ -92,3 +92,36 @@ export const requestApproveRefund = (accessToken: string, orderId: string) =>
 /** 驳回退款申请 */
 export const requestRejectRefund = (accessToken: string, orderId: string) =>
   postRefundDecision(accessToken, orderId, "reject");
+
+/** 指派 / 改派订单给打手（workerId 为打手账号的 userId） */
+export const requestAssignOrder = async (
+  accessToken: string,
+  orderId: string,
+  workerId: string
+) => {
+  const token = ensureAccessToken(accessToken);
+  const response = await fetch(buildUrl(`/orders/${encodeURIComponent(orderId)}/assign`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildAuthHeader(token)
+    },
+    body: JSON.stringify({ workerId })
+  });
+
+  return unwrapEnvelope<Order>(response);
+};
+
+/** 撤销指派 */
+export const requestUnassignOrder = async (accessToken: string, orderId: string) => {
+  const token = ensureAccessToken(accessToken);
+  const response = await fetch(buildUrl(`/orders/${encodeURIComponent(orderId)}/unassign`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildAuthHeader(token)
+    }
+  });
+
+  return unwrapEnvelope<Order>(response);
+};

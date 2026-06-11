@@ -36,4 +36,5 @@ export type Order = {
   progress: OrderProgressStep[];
   deliveries: OrderDeliveryItem[];
   createdBy: string;
+  assignedWorkerId: string;
 };
