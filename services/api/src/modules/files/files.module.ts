@@ -8,6 +8,6 @@ import { CosStorageService } from "./cos-storage.service";
   imports: [AuthModule],
   controllers: [FilesController],
   providers: [FilesService, CosStorageService],
-  exports: [FilesService]
+  exports: [FilesService, CosStorageService]
 })
 export class FilesModule {}

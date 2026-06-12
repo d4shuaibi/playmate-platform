@@ -202,7 +202,11 @@ export const OrderDetailPage = () => {
                       {refundStatusLabelMap[detail.refundStatus]}
                     </Descriptions.Item>
                     <Descriptions.Item label="下单时间">{detail.createdAt}</Descriptions.Item>
-                    <Descriptions.Item label="创建人">{detail.createdBy}</Descriptions.Item>
+                    <Descriptions.Item label="创建人">
+                      {detail.creatorName
+                        ? `${detail.creatorName}（${detail.createdBy}）`
+                        : detail.createdBy}
+                    </Descriptions.Item>
                     <Descriptions.Item label="进度">{progressText || "-"}</Descriptions.Item>
                   </Descriptions>
                 </div>

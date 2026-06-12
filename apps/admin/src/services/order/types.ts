@@ -36,5 +36,7 @@ export type Order = {
   progress: OrderProgressStep[];
   deliveries: OrderDeliveryItem[];
   createdBy: string;
+  /** 下单用户展示名（昵称，无昵称回退脱敏手机号）；为空串时仅展示 id */
+  creatorName: string;
   assignedWorkerId: string;
 };

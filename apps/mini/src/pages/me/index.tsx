@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, Image } from "@tarojs/components";
+import { View, Text, ScrollView, Image, Button, Input } from "@tarojs/components";
+import type { BaseEventOrig } from "@tarojs/components";
 import Taro, { useDidShow } from "@tarojs/taro";
 import { useCallback, useState } from "react";
 import "./index.scss";
@@ -7,6 +8,8 @@ import {
   fetchMiniMe,
   fetchWorkerJoinProgress,
   logoutMiniUser,
+  updateMiniProfile,
+  uploadAvatar,
   type MiniMePayload
 } from "../../services";
 import { getRole, setRole } from "../../utils/role";
@@ -63,6 +66,8 @@ const MePage = () => {
   const [loggedIn, setLoggedIn] = useState(() => Boolean(getToken()));
   const [loginOpen, setLoginOpen] = useState(false);
   const [meData, setMeData] = useState<MiniMePayload | null>(null);
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState("");
 
   const loadMe = useCallback(async () => {
     if (!getToken()) {
@@ -196,6 +201,51 @@ const MePage = () => {
     handleFeatureClick(menu.label);
   };
 
+  const handleChooseAvatar = (e: BaseEventOrig<{ avatarUrl?: string }>) => {
+    const tempPath = e.detail?.avatarUrl;
+    if (!tempPath) return;
+    void (async () => {
+      try {
+        void Taro.showLoading({ title: "上传中", mask: true });
+        const url = await uploadAvatar(tempPath);
+        const data = await updateMiniProfile({ avatarUrl: url });
+        setMeData(data);
+        Taro.hideLoading();
+        void Taro.showToast({ title: "头像已更新", icon: "success" });
+      } catch (error) {
+        Taro.hideLoading();
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "头像更新失败",
+          icon: "none"
+        });
+      }
+    })();
+  };
+
+  const handleStartEditNickname = () => {
+    if (!loggedIn) return;
+    setNicknameDraft(meData?.nickname ?? "");
+    setEditingNickname(true);
+  };
+
+  const handleNicknameBlur = (e: BaseEventOrig<{ value?: string }>) => {
+    const next = (e.detail?.value ?? nicknameDraft).trim();
+    setEditingNickname(false);
+    if (next.length === 0 || next === (meData?.nickname ?? "")) return;
+    void (async () => {
+      try {
+        const data = await updateMiniProfile({ nickname: next });
+        setMeData(data);
+        void Taro.showToast({ title: "昵称已更新", icon: "success" });
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "昵称更新失败",
+          icon: "none"
+        });
+      }
+    })();
+  };
+
   const avatarUrl = meData?.avatarUrl?.trim();
   const nickname = loggedIn ? (meData?.nickname ?? "微信用户") : "未登录";
   const displayId = loggedIn ? (meData?.displayId ?? "") : "";
@@ -207,22 +257,59 @@ const MePage = () => {
       <ScrollView className="mePage__scroll" scrollY enhanced showScrollbar={false}>
         <View className="mePage__profileCard">
           <View className="mePage__avatarWrap">
-            <View className="mePage__avatar">
-              {loggedIn && avatarUrl ? (
-                <Image
-                  className="mePage__avatarImg"
-                  src={avatarUrl}
-                  mode="aspectFill"
-                  aria-label="头像"
-                />
-              ) : (
+            {loggedIn ? (
+              <Button
+                className="mePage__avatarBtn"
+                openType="chooseAvatar"
+                onChooseAvatar={handleChooseAvatar}
+                aria-label="更换头像"
+              >
+                <View className="mePage__avatar">
+                  {avatarUrl ? (
+                    <Image
+                      className="mePage__avatarImg"
+                      src={avatarUrl}
+                      mode="aspectFill"
+                      aria-label="头像"
+                    />
+                  ) : (
+                    <Text className="mePage__avatarText">👤</Text>
+                  )}
+                </View>
+                <View className="mePage__avatarEditBadge">
+                  <Text className="mePage__avatarEditBadgeText">编辑</Text>
+                </View>
+              </Button>
+            ) : (
+              <View className="mePage__avatar">
                 <Text className="mePage__avatarText">👤</Text>
-              )}
-            </View>
+              </View>
+            )}
           </View>
           <View className="mePage__profileMain">
-            <Text className="mePage__nickname">{nickname}</Text>
-            {loggedIn ? (
+            {loggedIn && editingNickname ? (
+              <Input
+                className="mePage__nicknameInput"
+                type="nickname"
+                value={nicknameDraft}
+                focus
+                placeholder="点击使用微信昵称"
+                maxlength={24}
+                onInput={(e) => setNicknameDraft(e.detail.value)}
+                onBlur={handleNicknameBlur}
+                onConfirm={handleNicknameBlur}
+              />
+            ) : (
+              <Text
+                className="mePage__nickname"
+                onClick={handleStartEditNickname}
+                aria-label={loggedIn ? "点击修改昵称" : undefined}
+              >
+                {nickname}
+                {loggedIn ? " ✎" : ""}
+              </Text>
+            )}
+            {loggedIn && !editingNickname ? (
               <View className="mePage__profileMetaRow">
                 <Text className="mePage__profileMeta">{displayId}</Text>
               </View>

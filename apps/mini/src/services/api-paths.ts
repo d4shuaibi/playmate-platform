@@ -28,8 +28,12 @@ export const apiPaths = {
   /** GET 入驻考核类型枚举（无需登录） */
   miniWorkerJoinAssessmentOptions: "/api/mini/worker-join/assessment-options",
 
-  /** GET 当前登录用户「我的」聚合：昵称头像、余额、订单 Tab 统计 */
+  /** GET 当前登录用户「我的」聚合：昵称头像、余额、订单 Tab 统计；PATCH body `{ nickname?, avatarUrl? }` 更新资料 */
   miniMe: "/api/mini/me",
+  /** POST 申请头像直传凭证（返回 mode=cos 直传 / mode=direct 回退） */
+  miniMeAvatarUploadUrl: "/api/mini/me/avatar/upload-url",
+  /** POST multipart 本地回退头像直传（无云存储时） */
+  miniMeAvatarUpload: "/api/mini/me/avatar/upload",
 
   /** GET 公开客服列表（启用账号）：头像、微信、二维码、在线状态（无需登录） */
   miniCustomerServiceAgents: "/api/mini/customer-service/agents",

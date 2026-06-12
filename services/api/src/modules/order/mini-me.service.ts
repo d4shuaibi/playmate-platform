@@ -63,4 +63,44 @@ export class MiniMeService {
       }
     };
   }
+
+  /**
+   * 更新「我的」资料：昵称 / 头像。两者均为可选，仅更新传入字段。
+   * 昵称去首尾空白后限 1~24 个字符；头像须为我方文件直链（http/https）。
+   */
+  async updateProfile(
+    userId: string,
+    input: { nickname?: string; avatarUrl?: string }
+  ): Promise<ApiEnvelope<MiniMeDto>> {
+    const data: { nickname?: string; avatarUrl?: string } = {};
+
+    if (input.nickname !== undefined) {
+      const nick = input.nickname.trim();
+      if (nick.length === 0 || nick.length > 24) {
+        return { code: 400, message: "昵称需为 1~24 个字符", data: null };
+      }
+      data.nickname = nick;
+    }
+
+    if (input.avatarUrl !== undefined) {
+      const url = input.avatarUrl.trim();
+      if (!/^https?:\/\/.+/.test(url) || url.length > 512) {
+        return { code: 400, message: "头像地址不合法", data: null };
+      }
+      data.avatarUrl = url;
+    }
+
+    if (Object.keys(data).length === 0) {
+      return { code: 400, message: "没有可更新的字段", data: null };
+    }
+
+    const exists = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    });
+    if (!exists) return { code: 404, message: "user not found", data: null };
+
+    await this.prisma.user.update({ where: { id: userId }, data });
+    return this.getMe(userId);
+  }
 }

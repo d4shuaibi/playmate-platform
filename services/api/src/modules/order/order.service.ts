@@ -148,7 +148,18 @@ const parseDeliveries = (raw: Prisma.JsonValue): OrderDeliveryItem[] => {
   return out;
 };
 
-const mapRowToOrder = (row: BizOrder): Order => {
+/** 关联用户的下单人展示名：昵称优先，否则脱敏手机号（138****8888），都没有则空串 */
+type CreatorUser = { nickname: string | null; phone: string | null } | null;
+
+const resolveCreatorName = (user: CreatorUser): string => {
+  const nick = user?.nickname?.trim();
+  if (nick) return nick;
+  const ph = user?.phone?.replace(/\s/g, "") ?? "";
+  if (ph.length >= 7) return `${ph.slice(0, 3)}****${ph.slice(-4)}`;
+  return "";
+};
+
+const mapRowToOrder = (row: BizOrder & { user?: CreatorUser }): Order => {
   const status = toOrderStatus(row.status);
   return {
     id: row.id,
@@ -165,6 +176,7 @@ const mapRowToOrder = (row: BizOrder): Order => {
     progress: buildProgress(status),
     deliveries: parseDeliveries(row.deliveries),
     createdBy: row.createdBy,
+    creatorName: resolveCreatorName(row.user ?? null),
     userId: row.userId ?? "",
     productId: row.productId ?? "",
     refundStatus: toRefundStatus(row.refundStatus),
@@ -275,7 +287,8 @@ export class OrderService {
         where,
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
-        take: pageSize
+        take: pageSize,
+        include: { user: { select: { nickname: true, phone: true } } }
       })
     ]);
 
@@ -291,7 +304,10 @@ export class OrderService {
 
   /** 管理端 / 调试：按 ID 取单 */
   public async getOrder(id: string): Promise<ApiEnvelope<Order>> {
-    const row = await this.prisma.bizOrder.findUnique({ where: { id } });
+    const row = await this.prisma.bizOrder.findUnique({
+      where: { id },
+      include: { user: { select: { nickname: true, phone: true } } }
+    });
     if (!row) return { code: 404, message: "order not found", data: null };
     return { code: 0, message: "ok", data: mapRowToOrder(row) };
   }

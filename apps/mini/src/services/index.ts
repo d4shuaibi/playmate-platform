@@ -8,5 +8,5 @@ export {
   type WorkerAssessmentOption,
   type WorkerAssessmentType
 } from "./worker-join";
-export { fetchMiniMe, type MiniMePayload } from "./mini-me";
+export { fetchMiniMe, updateMiniProfile, uploadAvatar, type MiniMePayload } from "./mini-me";
 export { fetchMiniCustomerServiceAgents, type MiniCustomerServiceAgent } from "./customer-service";

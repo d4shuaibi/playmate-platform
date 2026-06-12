@@ -222,9 +222,10 @@ export const OrderManagementPage = () => {
     },
     {
       title: "创建人",
-      dataIndex: "createdBy",
       key: "createdBy",
-      width: 120
+      width: 160,
+      render: (_, row) =>
+        row.creatorName ? `${row.creatorName}（${row.createdBy}）` : row.createdBy
     },
     {
       title: "指派打手",

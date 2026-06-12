@@ -36,6 +36,8 @@ export type Order = {
   progress: OrderProgressStep[];
   deliveries: OrderDeliveryItem[];
   createdBy: string;
+  /** 下单用户展示名（昵称，无昵称回退脱敏手机号）；未 join 用户时为空串 */
+  creatorName: string;
   /** 下单用户（小程序 JWT sub）；种子订单可为空串 */
   userId: string;
   /** 来源商品 ID */
