@@ -4,6 +4,7 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { useCallback, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import { ContactSupportFab } from "../../components/contact-support/ContactSupportFab";
 import {
   fetchMiniMe,
   fetchWorkerJoinProgress,
@@ -426,6 +427,7 @@ const MePage = () => {
       </ScrollView>
 
       <BottomBar role={role} activeKey="me" />
+      <ContactSupportFab from="me" role={role} />
 
       <LoginModal
         visible={loginOpen}

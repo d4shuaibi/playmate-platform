@@ -13,7 +13,14 @@ const SOURCE_LABELS: Record<string, string> = {
   "goods-detail": "商品详情",
   "order-detail": "订单详情",
   "worker-order-detail": "打手订单",
-  "worker-income-detail": "收益明细"
+  "worker-income-detail": "收益明细",
+  "home-user": "首页",
+  "home-worker": "工作台",
+  category: "分类",
+  orders: "订单列表",
+  "worker-orders": "打手订单列表",
+  income: "收益",
+  "worker-income-history": "收益明细列表"
 };
 
 /**

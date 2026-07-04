@@ -3,6 +3,7 @@ import Taro, { useRouter } from "@tarojs/taro";
 import { useCallback, useEffect, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import { ContactSupportFab } from "../../components/contact-support/ContactSupportFab";
 import { getRole } from "../../utils/role";
 import { fetchWorkerIncomeDetail, type WorkerIncomeDetail } from "../../services/worker-income";
 
@@ -163,6 +164,7 @@ const WorkerIncomeDetailPage = () => {
       </ScrollView>
 
       <BottomBar role={role} activeKey="income" />
+      <ContactSupportFab from="worker-income-detail" role={role} />
     </View>
   );
 };

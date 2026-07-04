@@ -84,6 +84,8 @@ const mapApplicationRow = (row: WorkerJoinApplicationRow): WorkerJoinApplication
   age: row.age,
   phone: row.phone,
   idNo: row.idNo,
+  idCardFrontUrl: row.idCardFrontUrl ?? undefined,
+  idCardBackUrl: row.idCardBackUrl ?? undefined,
   assessmentType: toApiAssessment(row.assessmentType),
   status: mapJoinStatus(row.status),
   rejectReason: row.rejectReason ?? undefined,
@@ -96,6 +98,10 @@ const mapWorkerAccountRow = (row: WorkerAccountRow): Worker => ({
   userId: row.userId,
   realName: row.realName,
   phone: row.phone,
+  idNo: row.idNo ?? undefined,
+  address: row.address ?? undefined,
+  idCardFrontUrl: row.idCardFrontUrl ?? undefined,
+  idCardBackUrl: row.idCardBackUrl ?? undefined,
   assessmentType: toApiAssessment(row.assessmentType),
   joinStatus: mapJoinStatus(row.joinStatus),
   status: row.status === WorkerAccountOperationalStatus.active ? "active" : "disabled",
@@ -189,11 +195,15 @@ export class WorkerService {
     age: number;
     phone: string;
     idNo: string;
+    idCardFrontUrl?: string;
+    idCardBackUrl?: string;
     assessmentType: unknown;
   }): Promise<ApiEnvelope<Pick<WorkerJoinApplication, "id" | "refNo" | "status">>> {
     const realName = normalizeName(input.realName);
     const phone = normalizePhone(input.phone);
     const idNo = normalizeIdNo(input.idNo);
+    const idCardFrontUrl = (input.idCardFrontUrl ?? "").trim();
+    const idCardBackUrl = (input.idCardBackUrl ?? "").trim();
     const age = Math.floor(input.age);
     const assessmentType = resolveAssessmentType(input.assessmentType);
 
@@ -201,6 +211,8 @@ export class WorkerService {
     if (!Number.isFinite(age) || age <= 0) return { code: 400, message: "Invalid age", data: null };
     if (!phone) return { code: 400, message: "Missing phone", data: null };
     if (!idNo) return { code: 400, message: "Missing idNo", data: null };
+    if (!idCardFrontUrl) return { code: 400, message: "Missing idCardFrontUrl", data: null };
+    if (!idCardBackUrl) return { code: 400, message: "Missing idCardBackUrl", data: null };
     if (!assessmentType) {
       return { code: 400, message: "Invalid assessmentType", data: null };
     }
@@ -224,6 +236,8 @@ export class WorkerService {
           age,
           phone,
           idNo,
+          idCardFrontUrl,
+          idCardBackUrl,
           assessmentType: prismaEnum,
           status: WorkerJoinApplicationStatus.reviewing,
           rejectReason: null,
@@ -250,6 +264,8 @@ export class WorkerService {
         age,
         phone,
         idNo,
+        idCardFrontUrl,
+        idCardBackUrl,
         assessmentType: prismaEnum,
         status: WorkerJoinApplicationStatus.reviewing
       }
@@ -293,6 +309,9 @@ export class WorkerService {
             userId: found.userId,
             realName: found.realName,
             phone: found.phone,
+            idNo: found.idNo,
+            idCardFrontUrl: found.idCardFrontUrl,
+            idCardBackUrl: found.idCardBackUrl,
             assessmentType: found.assessmentType,
             joinStatus: WorkerJoinApplicationStatus.approved,
             status: WorkerAccountOperationalStatus.active
@@ -300,6 +319,9 @@ export class WorkerService {
           update: {
             realName: found.realName,
             phone: found.phone,
+            idNo: found.idNo,
+            idCardFrontUrl: found.idCardFrontUrl,
+            idCardBackUrl: found.idCardBackUrl,
             assessmentType: found.assessmentType,
             joinStatus: WorkerJoinApplicationStatus.approved,
             status: WorkerAccountOperationalStatus.active,
@@ -393,6 +415,12 @@ export class WorkerService {
     };
   }
 
+  async getWorker(id: string): Promise<ApiEnvelope<Worker>> {
+    const row = await this.prisma.workerAccount.findUnique({ where: { id } });
+    if (!row) return { code: 404, message: "Worker not found", data: null };
+    return { code: 0, message: "ok", data: mapWorkerAccountRow(row) };
+  }
+
   async toggleWorkerStatus(input: {
     id: string;
     status: WorkerStatus;
@@ -425,5 +453,34 @@ export class WorkerService {
       })
     ]);
     return { code: 0, message: "ok", data: { success: true } };
+  }
+
+  /**
+   * 管理端：修改打手身份证信息 / 现居住地信息（留底用），可选同步更正身份证照片。
+   */
+  async updateWorkerDetails(
+    id: string,
+    input: {
+      idNo?: string;
+      address?: string;
+      idCardFrontUrl?: string;
+      idCardBackUrl?: string;
+    }
+  ): Promise<ApiEnvelope<Worker>> {
+    const account = await this.prisma.workerAccount.findUnique({ where: { id } });
+    if (!account) return { code: 404, message: "Worker not found", data: null };
+
+    const row = await this.prisma.workerAccount.update({
+      where: { id },
+      data: {
+        idNo: input.idNo !== undefined ? normalizeIdNo(input.idNo) : undefined,
+        address: input.address !== undefined ? input.address.trim() : undefined,
+        idCardFrontUrl:
+          input.idCardFrontUrl !== undefined ? input.idCardFrontUrl.trim() : undefined,
+        idCardBackUrl: input.idCardBackUrl !== undefined ? input.idCardBackUrl.trim() : undefined,
+        updatedAt: new Date()
+      }
+    });
+    return { code: 0, message: "ok", data: mapWorkerAccountRow(row) };
   }
 }

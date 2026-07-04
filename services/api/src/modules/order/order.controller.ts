@@ -57,6 +57,15 @@ export class OrderController {
   }
 
   /**
+   * POST /api/orders/:id/cancel  取消未支付订单
+   */
+  @Post(":id/cancel")
+  @RequireAdminPermissions("order.write")
+  async cancel(@Param("id") id: string) {
+    return this.orderService.cancelOrderAdmin(id);
+  }
+
+  /**
    * POST /api/orders/:id/assign  指派 / 改派订单给打手  body: `{ workerId }`
    */
   @Post(":id/assign")

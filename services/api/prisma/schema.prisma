@@ -178,6 +178,10 @@ model WorkerJoinApplication {
   phone    String
   idNo     String
 
+  /// 身份证正反面照片（对象存储直链），入驻资料留底
+  idCardFrontUrl String? @db.Text
+  idCardBackUrl  String? @db.Text
+
   assessmentType WorkerAssessmentKind
   status         WorkerJoinApplicationStatus
   rejectReason   String?
@@ -196,6 +200,12 @@ model WorkerAccount {
 
   realName String
   phone    String
+
+  /// 身份证号 / 现居住地址 / 身份证正反面照片（管理端「修改」操作留底）
+  idNo           String?
+  address        String? @db.Text
+  idCardFrontUrl String? @db.Text
+  idCardBackUrl  String? @db.Text
 
   assessmentType WorkerAssessmentKind
   joinStatus     WorkerJoinApplicationStatus @default(approved)

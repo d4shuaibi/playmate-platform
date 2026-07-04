@@ -3,6 +3,7 @@ import Taro from "@tarojs/taro";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import { ContactSupportFab } from "../../components/contact-support/ContactSupportFab";
 import { getRole } from "../../utils/role";
 import {
   fetchWorkerIncomeLedger,
@@ -195,6 +196,7 @@ const IncomePage = () => {
       </ScrollView>
 
       <BottomBar role={role} activeKey="income" />
+      <ContactSupportFab from="income" role={role} />
     </View>
   );
 };

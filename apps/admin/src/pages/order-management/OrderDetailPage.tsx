@@ -16,6 +16,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getAdminAuthSession } from "../../services/auth/session";
 import {
   requestApproveRefund,
+  requestCancelOrder,
   requestOrderDetail,
   requestRejectRefund
 } from "../../services/order/api";
@@ -61,9 +62,24 @@ export const OrderDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<Order | null>(null);
   const [refundSubmitting, setRefundSubmitting] = useState(false);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
 
   const handleGoBack = () => {
     void navigate("/order-management");
+  };
+
+  const handleCancelOrder = async () => {
+    if (!detail || !accessToken) return;
+    setCancelSubmitting(true);
+    try {
+      const updated = await requestCancelOrder(accessToken, detail.id);
+      setDetail(updated);
+      message.success("订单已取消");
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "取消订单失败");
+    } finally {
+      setCancelSubmitting(false);
+    }
   };
 
   const handleRefundDecision = async (decision: "approve" | "reject") => {
@@ -145,6 +161,19 @@ export const OrderDetailPage = () => {
                     </Tag>
                   ) : null}
                   <Tag color={statusColorMap[detail.status]}>{statusLabelMap[detail.status]}</Tag>
+                  {detail.status === "pendingPay" ? (
+                    <Popconfirm
+                      title="确认取消该订单？"
+                      description="取消后订单将变为已取消状态，且无法恢复。"
+                      okText="确认取消"
+                      cancelText="再想想"
+                      onConfirm={() => void handleCancelOrder()}
+                    >
+                      <Button danger loading={cancelSubmitting}>
+                        取消订单
+                      </Button>
+                    </Popconfirm>
+                  ) : null}
                 </Space>
               </div>
 

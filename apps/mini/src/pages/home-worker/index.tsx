@@ -3,6 +3,7 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import { ContactSupportFab } from "../../components/contact-support/ContactSupportFab";
 import { getRole } from "../../utils/role";
 import type { MiniOrder } from "../../services/orders";
 import {
@@ -265,6 +266,7 @@ const WorkerHomePage = () => {
       </ScrollView>
 
       <BottomBar role={role} activeKey="home" />
+      <ContactSupportFab from="home-worker" role={role} />
 
       <View
         className="workerCommand__roleSwitch"

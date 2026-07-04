@@ -22,6 +22,10 @@ export type Worker = {
   userId: string;
   realName: string;
   phone: string;
+  idNo?: string;
+  address?: string;
+  idCardFrontUrl?: string;
+  idCardBackUrl?: string;
   assessmentType: WorkerAssessmentType;
   joinStatus: WorkerJoinStatus;
   status: WorkerStatus;

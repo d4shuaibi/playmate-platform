@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Input, Picker } from "@tarojs/components";
+import { View, Text, ScrollView, Input, Picker, Image } from "@tarojs/components";
 import Taro from "@tarojs/taro";
 import { useEffect, useMemo, useState } from "react";
 import "./index.scss";
@@ -6,6 +6,7 @@ import { getRole } from "../../utils/role";
 import {
   applyWorkerJoin,
   fetchWorkerAssessmentOptions,
+  uploadIdCardPhoto,
   type WorkerAssessmentOption
 } from "../../services";
 import { getToken } from "../../utils/session";
@@ -15,6 +16,8 @@ type JoinDraft = {
   age: string;
   phone: string;
   idNo: string;
+  idCardFrontUrl: string;
+  idCardBackUrl: string;
   assessmentType: string;
 };
 
@@ -28,8 +31,12 @@ const WorkerJoinPage = () => {
     age: "",
     phone: "",
     idNo: "",
+    idCardFrontUrl: "",
+    idCardBackUrl: "",
     assessmentType: ""
   });
+  const [uploadingFront, setUploadingFront] = useState(false);
+  const [uploadingBack, setUploadingBack] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -73,10 +80,44 @@ const WorkerJoinPage = () => {
     if (!draft.age.trim()) return false;
     if (!draft.phone.trim()) return false;
     if (!draft.idNo.trim()) return false;
+    if (!draft.idCardFrontUrl.trim()) return false;
+    if (!draft.idCardBackUrl.trim()) return false;
     if (!draft.assessmentType.trim()) return false;
     if (assessmentOptions.length === 0) return false;
     return true;
   }, [draft, assessmentOptions.length]);
+
+  const handleChooseIdCardPhoto = (side: "front" | "back") => {
+    if (side === "front" ? uploadingFront : uploadingBack) return;
+    void (async () => {
+      try {
+        const chosen = await Taro.chooseImage({
+          count: 1,
+          sizeType: ["compressed"],
+          sourceType: ["album", "camera"]
+        });
+        const tempPath = chosen.tempFilePaths?.[0];
+        if (!tempPath) return;
+
+        if (side === "front") setUploadingFront(true);
+        else setUploadingBack(true);
+
+        const url = await uploadIdCardPhoto(tempPath, side);
+        setDraft((prev) => ({
+          ...prev,
+          [side === "front" ? "idCardFrontUrl" : "idCardBackUrl"]: url
+        }));
+      } catch (error) {
+        void Taro.showToast({
+          title: error instanceof Error ? error.message : "上传失败，请重试",
+          icon: "none"
+        });
+      } finally {
+        if (side === "front") setUploadingFront(false);
+        else setUploadingBack(false);
+      }
+    })();
+  };
 
   const handleGoBack = () => {
     const pages = Taro.getCurrentPages();
@@ -106,6 +147,8 @@ const WorkerJoinPage = () => {
           age: Number(draft.age),
           phone: draft.phone.trim(),
           idNo: draft.idNo.trim(),
+          idCardFrontUrl: draft.idCardFrontUrl.trim(),
+          idCardBackUrl: draft.idCardBackUrl.trim(),
           assessmentType: draft.assessmentType.trim()
         });
         void Taro.showToast({ title: "已提交申请", icon: "none" });
@@ -204,6 +247,66 @@ const WorkerJoinPage = () => {
               placeholderClass="workerJoin__placeholder"
               aria-label="输入身份证号"
             />
+          </View>
+
+          <View className="workerJoin__field">
+            <Text className="workerJoin__label">身份证照片</Text>
+            <View className="workerJoin__idCardRow">
+              <View
+                className="workerJoin__idCardBox"
+                onClick={() => handleChooseIdCardPhoto("front")}
+                aria-label="上传身份证正面照片"
+              >
+                {draft.idCardFrontUrl ? (
+                  <>
+                    <Image
+                      className="workerJoin__idCardPreview"
+                      src={draft.idCardFrontUrl}
+                      mode="aspectFill"
+                    />
+                    <View className="workerJoin__idCardBoxMask">
+                      <Text className="workerJoin__idCardBoxMaskText">
+                        {uploadingFront ? "上传中..." : "重新上传"}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text className="workerJoin__idCardBoxIcon">+</Text>
+                    <Text className="workerJoin__idCardBoxText">
+                      {uploadingFront ? "上传中..." : "身份证正面"}
+                    </Text>
+                  </>
+                )}
+              </View>
+              <View
+                className="workerJoin__idCardBox"
+                onClick={() => handleChooseIdCardPhoto("back")}
+                aria-label="上传身份证反面照片"
+              >
+                {draft.idCardBackUrl ? (
+                  <>
+                    <Image
+                      className="workerJoin__idCardPreview"
+                      src={draft.idCardBackUrl}
+                      mode="aspectFill"
+                    />
+                    <View className="workerJoin__idCardBoxMask">
+                      <Text className="workerJoin__idCardBoxMaskText">
+                        {uploadingBack ? "上传中..." : "重新上传"}
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text className="workerJoin__idCardBoxIcon">+</Text>
+                    <Text className="workerJoin__idCardBoxText">
+                      {uploadingBack ? "上传中..." : "身份证反面"}
+                    </Text>
+                  </>
+                )}
+              </View>
+            </View>
           </View>
 
           <View className="workerJoin__field">

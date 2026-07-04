@@ -4,6 +4,7 @@ import { Notice, Search, Star, HeartFill } from "@nutui/icons-react-taro";
 import React, { useEffect, useMemo, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import { ContactSupportFab } from "../../components/contact-support/ContactSupportFab";
 import { AppIconFont } from "../../components/icon-font/IconFont";
 import { LoginModal } from "../../components/login-modal/LoginModal";
 import { getRole } from "../../utils/role";
@@ -341,6 +342,7 @@ const UserHomePage = () => {
       </View>
 
       <BottomBar role={role} activeKey="home" />
+      <ContactSupportFab from="home-user" role={role} />
 
       <View className="userHome__roleSwitch" onClick={handleGoWorkerHome} aria-label="切换到打手端">
         <Text className="userHome__roleSwitchText">打手端</Text>

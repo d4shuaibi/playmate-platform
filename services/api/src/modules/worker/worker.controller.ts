@@ -67,6 +67,33 @@ export class WorkerAdminController {
   }
 
   /**
+   * GET /api/workers/:id
+   */
+  @Get("workers/:id")
+  @RequireAdminPermissions("worker.read")
+  async getWorker(@Param("id") id: string) {
+    return this.workerService.getWorker(id);
+  }
+
+  /**
+   * PATCH /api/workers/:id  修改身份证信息 / 现居住地信息（留底）
+   */
+  @Patch("workers/:id")
+  @RequireAdminPermissions("worker.write")
+  async updateWorker(
+    @Param("id") id: string,
+    @Body()
+    body: {
+      idNo?: string;
+      address?: string;
+      idCardFrontUrl?: string;
+      idCardBackUrl?: string;
+    }
+  ) {
+    return this.workerService.updateWorkerDetails(id, body ?? {});
+  }
+
+  /**
    * PATCH /api/workers/:id/disable
    */
   @Patch("workers/:id/disable")

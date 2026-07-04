@@ -3,6 +3,7 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import { ContactSupportFab } from "../../components/contact-support/ContactSupportFab";
 import { getRole } from "../../utils/role";
 import type { MiniOrder, MiniOrderStatus } from "../../services/orders";
 import {
@@ -243,6 +244,7 @@ const WorkerOrdersPage = () => {
       </ScrollView>
 
       <BottomBar role={role} activeKey="orders" />
+      <ContactSupportFab from="worker-orders" role={role} />
     </View>
   );
 };

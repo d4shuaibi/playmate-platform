@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
+import { FilesModule } from "../files/files.module";
 import { OrderModule } from "../order/order.module";
 import { WorkerAdminController } from "./worker.controller";
 import { WorkerMiniController } from "./worker.mini.controller";
@@ -10,7 +11,7 @@ import { WorkerIncomeService } from "./worker-income.service";
 import { WorkerService } from "./worker.service";
 
 @Module({
-  imports: [AuthModule, OrderModule],
+  imports: [AuthModule, OrderModule, FilesModule],
   controllers: [
     WorkerAdminController,
     WorkerMiniController,

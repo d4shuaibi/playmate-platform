@@ -753,6 +753,28 @@ export class OrderService {
   }
 
   /**
+   * 管理端：取消未支付订单（仅 pendingPay 状态可取消）。
+   */
+  public async cancelOrderAdmin(orderId: string): Promise<ApiEnvelope<Order>> {
+    const row = await this.prisma.bizOrder.findUnique({ where: { id: orderId } });
+    if (!row) return { code: 404, message: "order not found", data: null };
+    const found = mapRowToOrder(row);
+
+    if (found.status !== "pendingPay") {
+      return { code: 400, message: "仅待付款订单可取消", data: null };
+    }
+
+    const nextRow = await this.prisma.bizOrder.update({
+      where: { id: orderId },
+      data: {
+        status: BizOrderStatus.cancelled,
+        updatedAt: new Date()
+      }
+    });
+    return { code: 0, message: "ok", data: mapRowToOrder(nextRow) };
+  }
+
+  /**
    * 管理端：将待接单订单指派给指定打手（按打手的 userId）。
    * 仅 pendingTake 且无退款处理中的订单可指派；已指派可改派。
    */

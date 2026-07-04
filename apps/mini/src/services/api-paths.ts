@@ -27,6 +27,10 @@ export const apiPaths = {
   miniWorkerJoinApply: "/api/mini/worker-join/apply",
   /** GET 入驻考核类型枚举（无需登录） */
   miniWorkerJoinAssessmentOptions: "/api/mini/worker-join/assessment-options",
+  /** POST 申请身份证照片直传凭证（返回 mode=cos 直传 / mode=direct 回退） */
+  miniWorkerJoinIdCardUploadUrl: "/api/mini/worker-join/id-card/upload-url",
+  /** POST multipart 本地回退身份证照片直传（无云存储时） */
+  miniWorkerJoinIdCardUpload: "/api/mini/worker-join/id-card/upload",
 
   /** GET 当前登录用户「我的」聚合：昵称头像、余额、订单 Tab 统计；PATCH body `{ nickname?, avatarUrl? }` 更新资料 */
   miniMe: "/api/mini/me",

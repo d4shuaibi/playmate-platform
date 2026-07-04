@@ -93,6 +93,20 @@ export const requestApproveRefund = (accessToken: string, orderId: string) =>
 export const requestRejectRefund = (accessToken: string, orderId: string) =>
   postRefundDecision(accessToken, orderId, "reject");
 
+/** 取消未支付订单 */
+export const requestCancelOrder = async (accessToken: string, orderId: string) => {
+  const token = ensureAccessToken(accessToken);
+  const response = await fetch(buildUrl(`/orders/${encodeURIComponent(orderId)}/cancel`), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildAuthHeader(token)
+    }
+  });
+
+  return unwrapEnvelope<Order>(response);
+};
+
 /** 指派 / 改派订单给打手（workerId 为打手账号的 userId） */
 export const requestAssignOrder = async (
   accessToken: string,

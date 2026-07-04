@@ -89,6 +89,35 @@ export const requestWorkers = async (
   return unwrapEnvelope<{ items: Worker[]; total: number }>(res);
 };
 
+export const requestWorker = async (accessToken: string, workerId: string) => {
+  const token = ensureAccessToken(accessToken);
+  const res = await fetch(buildUrl(`/workers/${encodeURIComponent(workerId)}`), {
+    method: "GET",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+  });
+  return unwrapEnvelope<Worker>(res);
+};
+
+/** 修改打手身份证信息 / 现居住地信息（留底） */
+export const requestUpdateWorker = async (
+  accessToken: string,
+  workerId: string,
+  input: {
+    idNo?: string;
+    address?: string;
+    idCardFrontUrl?: string;
+    idCardBackUrl?: string;
+  }
+) => {
+  const token = ensureAccessToken(accessToken);
+  const res = await fetch(buildUrl(`/workers/${encodeURIComponent(workerId)}`), {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(input)
+  });
+  return unwrapEnvelope<Worker>(res);
+};
+
 export const requestDisableWorker = async (accessToken: string, workerId: string) => {
   const token = ensureAccessToken(accessToken);
   const res = await fetch(buildUrl(`/workers/${encodeURIComponent(workerId)}/disable`), {

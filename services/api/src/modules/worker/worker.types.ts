@@ -20,6 +20,9 @@ export type WorkerJoinApplication = {
   age: number;
   phone: string;
   idNo: string;
+  /** 身份证正反面照片直链 */
+  idCardFrontUrl?: string;
+  idCardBackUrl?: string;
   assessmentType: WorkerAssessmentType;
   status: WorkerJoinStatus;
   rejectReason?: string;
@@ -32,6 +35,11 @@ export type Worker = {
   userId: string;
   realName: string;
   phone: string;
+  /** 身份证号 / 现居住地址 / 身份证正反面照片（管理端可修改，留底用） */
+  idNo?: string;
+  address?: string;
+  idCardFrontUrl?: string;
+  idCardBackUrl?: string;
   assessmentType: WorkerAssessmentType;
   joinStatus: WorkerJoinStatus;
   status: WorkerStatus;

@@ -3,6 +3,7 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import { ContactSupportFab } from "../../components/contact-support/ContactSupportFab";
 import { LoginModal } from "../../components/login-modal/LoginModal";
 import { getRole } from "../../utils/role";
 import { getToken } from "../../utils/session";
@@ -299,6 +300,7 @@ const OrdersPage = () => {
       </ScrollView>
 
       <BottomBar role={role} activeKey="orders" />
+      <ContactSupportFab from="orders" role={role} />
 
       <LoginModal
         visible={loginOpen}

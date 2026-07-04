@@ -16,7 +16,12 @@ import { type ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAdminAuthSession } from "../../services/auth/session";
-import { requestAssignOrder, requestOrders, requestUnassignOrder } from "../../services/order/api";
+import {
+  requestAssignOrder,
+  requestCancelOrder,
+  requestOrders,
+  requestUnassignOrder
+} from "../../services/order/api";
 import { type Order, type OrderStatus } from "../../services/order/types";
 import { requestWorkers } from "../../services/worker/api";
 import { type Worker } from "../../services/worker/types";
@@ -167,6 +172,18 @@ export const OrderManagementPage = () => {
     })();
   };
 
+  const handleCancelOrder = (row: Order) => {
+    void (async () => {
+      try {
+        await requestCancelOrder(accessToken, row.id);
+        message.success("订单已取消");
+        loadOrders(currentQuery);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : "取消订单失败");
+      }
+    })();
+  };
+
   const columns: ColumnsType<Order> = [
     {
       title: "订单号",
@@ -246,6 +263,7 @@ export const OrderManagementPage = () => {
       render: (_, row) => {
         const assigned = Boolean(row.assignedWorkerId?.trim());
         const canAssign = row.status === "pendingTake" && row.refundStatus !== "pending";
+        const canCancel = row.status === "pendingPay";
         return (
           <div className="flex flex-wrap items-center justify-start gap-1">
             <Button type="text" size="small" onClick={() => handleViewDetail(row)}>
@@ -265,6 +283,19 @@ export const OrderManagementPage = () => {
               >
                 <Button type="text" size="small" danger>
                   撤销
+                </Button>
+              </Popconfirm>
+            ) : null}
+            {canCancel ? (
+              <Popconfirm
+                title="确认取消该订单？"
+                description="取消后订单将变为已取消状态，且无法恢复。"
+                okText="确认取消"
+                cancelText="再想想"
+                onConfirm={() => handleCancelOrder(row)}
+              >
+                <Button type="text" size="small" danger>
+                  取消订单
                 </Button>
               </Popconfirm>
             ) : null}

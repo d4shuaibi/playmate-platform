@@ -3,6 +3,7 @@ import Taro, { useRouter } from "@tarojs/taro";
 import { useEffect, useMemo, useState } from "react";
 import "./index.scss";
 import { BottomBar } from "../../components/bottom-bar/BottomBar";
+import { ContactSupportFab } from "../../components/contact-support/ContactSupportFab";
 import { getRole } from "../../utils/role";
 import {
   fetchWorkerIncomeLedger,
@@ -266,6 +267,7 @@ const WorkerIncomeHistoryPage = () => {
       </ScrollView>
 
       <BottomBar role={role} activeKey="income" />
+      <ContactSupportFab from="worker-income-history" role={role} />
     </View>
   );
 };

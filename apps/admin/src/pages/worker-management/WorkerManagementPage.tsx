@@ -14,6 +14,7 @@ import {
 } from "antd";
 import { type ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getAdminAuthSession } from "../../services/auth/session";
 import {
   requestAuditWorkerApplication,
@@ -58,6 +59,7 @@ const workerStatusColorMap: Record<WorkerStatus, string> = {
 export const WorkerManagementPage = () => {
   const session = getAdminAuthSession();
   const accessToken = session?.accessToken ?? "";
+  const navigate = useNavigate();
 
   const [tab, setTab] = useState<TabKey>("applications");
   const [keyword, setKeyword] = useState("");
@@ -173,6 +175,10 @@ export const WorkerManagementPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditWorker = (row: Worker) => {
+    void navigate(`/worker-management/edit/${encodeURIComponent(row.id)}`);
   };
 
   const handleToggleWorker = async (row: Worker) => {
@@ -307,6 +313,9 @@ export const WorkerManagementPage = () => {
       width: 140,
       render: (_, row) => (
         <div className="flex flex-wrap items-center justify-start gap-1">
+          <Button type="text" size="small" onClick={() => handleEditWorker(row)}>
+            修改
+          </Button>
           <Button type="text" size="small" onClick={() => void handleToggleWorker(row)}>
             {row.status === "disabled" ? "启用" : "禁用"}
           </Button>

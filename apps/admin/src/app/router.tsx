@@ -15,6 +15,7 @@ import { EditProductPage } from "../pages/product-management/EditProductPage";
 import { OrderManagementPage } from "../pages/order-management/OrderManagementPage";
 import { OrderDetailPage } from "../pages/order-management/OrderDetailPage";
 import { WorkerManagementPage } from "../pages/worker-management/WorkerManagementPage";
+import { EditWorkerPage } from "../pages/worker-management/EditWorkerPage";
 import { BannerManagementPage } from "../pages/banner-management/BannerManagementPage";
 import { CreateBannerPage } from "../pages/banner-management/CreateBannerPage";
 import { EditBannerPage } from "../pages/banner-management/EditBannerPage";
@@ -130,6 +131,14 @@ export const AppRouter = () => {
             element={
               <RequireAdminPermission permission="worker.read">
                 <WorkerManagementPage />
+              </RequireAdminPermission>
+            }
+          />
+          <Route
+            path="/worker-management/edit/:id"
+            element={
+              <RequireAdminPermission permission="worker.write">
+                <EditWorkerPage />
               </RequireAdminPermission>
             }
           />

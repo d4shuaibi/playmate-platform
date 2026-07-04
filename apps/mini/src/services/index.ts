@@ -5,6 +5,7 @@ export {
   applyWorkerJoin,
   fetchWorkerAssessmentOptions,
   fetchWorkerJoinProgress,
+  uploadIdCardPhoto,
   type WorkerAssessmentOption,
   type WorkerAssessmentType
 } from "./worker-join";
